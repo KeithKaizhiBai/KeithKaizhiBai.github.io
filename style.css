@@ -1,0 +1,468 @@
+/* ========== Global ========== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+  background-color: #f8f9fa;
+  color: #212529;
+  margin: 0;
+}
+
+a {
+  color: #0d6efd;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ========== Header & Nav ========== */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #e9ecef;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+}
+
+nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 1rem 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: flex-start;
+}
+
+nav a {
+  color: #495057;
+  font-weight: 500;
+}
+
+nav a:hover {
+  color: #0d6efd;
+  text-decoration: none;
+}
+
+/* ========== Layout ========== */
+main {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 5rem 20px 3rem;
+}
+
+main > section {
+  margin-bottom: 4rem;
+}
+
+main > section:last-of-type {
+  margin-bottom: 2rem;
+}
+
+h2 {
+  font-size: 1.75rem;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #212529;
+}
+
+h3 {
+  font-size: 1.2rem;
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  color: #212529;
+}
+
+/* ========== CV — Personal card & skills ========== */
+#cv .personal-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+  background-color: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+#cv .profile-photo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+#cv .personal-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+#cv .personal-card .bio {
+  margin-bottom: 0;
+}
+
+#cv .education {
+  margin-bottom: 2rem;
+}
+
+#cv .education ul {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+}
+
+#cv .education li {
+  margin-bottom: 0.5rem;
+}
+
+#cv .skills ul.skill-tags {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+#cv .skill-tags span,
+#cv .skills .skill-tags span {
+  display: inline-block;
+  background-color: #e9ecef;
+  color: #495057;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* ========== Experience — Cards ========== */
+.experience-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.experience-card {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #eee;
+}
+
+.experience-card h3 {
+  margin-bottom: 0.5rem;
+}
+
+.experience-card .period {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin: 0 0 0.75rem;
+}
+
+.experience-card p:not(.period):not(.tech-tags),
+.experience-card .card-description {
+  margin: 0 0 1rem;
+}
+
+.experience-card ul.card-description {
+  padding-left: 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.experience-card ul.card-description li {
+  margin-bottom: 0.5rem;
+}
+
+.experience-card ul.card-description li:last-child {
+  margin-bottom: 0;
+}
+
+.experience-card--conference {
+  border-left: 3px solid #0d6efd;
+}
+
+.experience-card .tech-tags {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.experience-card .tech-tags span,
+.experience-card .tech-tags small {
+  display: inline-block;
+  background-color: #e9ecef;
+  color: #495057;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  margin-right: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+
+/* ========== Publications — Cards (same layout as Experience) ========== */
+.publications-intro {
+  margin: 0 0 1.25rem;
+  font-size: 0.95rem;
+}
+
+.publications-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.publication-card {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #eee;
+}
+
+.publication-card .publication-title {
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  color: #212529;
+  line-height: 1.4;
+}
+
+.publication-card .publication-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.publication-card .publication-title a:hover {
+  color: #0d6efd;
+  text-decoration: underline;
+}
+
+.publication-card .publication-meta {
+  color: #495057;
+  font-size: 0.9rem;
+  margin: 0 0 0.35rem;
+}
+
+.publication-card .publication-venue {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
+}
+
+.publication-card .publication-links {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.publications-loading,
+.publications-empty {
+  color: #6c757d;
+  margin: 0;
+  grid-column: 1 / -1;
+}
+
+.publications-empty code {
+  background-color: #e9ecef;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+/* ========== Notes — PDF note blocks ========== */
+.notes-block {
+  margin-bottom: 2rem;
+}
+
+.notes-block:last-child {
+  margin-bottom: 0;
+}
+
+.notes-subtitle {
+  font-size: 1.15rem;
+  margin: 0 0 0.75rem;
+  color: #212529;
+  font-weight: 600;
+}
+
+.notes-pdf-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.notes-pdf-item {
+  margin-bottom: 1.25rem;
+}
+
+.notes-pdf-item:last-child {
+  margin-bottom: 0;
+}
+
+.notes-pdf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #0d6efd;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.notes-pdf-link:hover {
+  text-decoration: underline;
+}
+
+.notes-pdf-link .fa-file-pdf {
+  font-size: 1em;
+  color: #dc3545;
+}
+
+.notes-pdf-desc {
+  margin: 0.35rem 0 0 1.5rem;
+  font-size: 0.9em;
+  color: #666;
+  line-height: 1.5;
+  max-width: 42rem;
+}
+
+/* ========== Courses ========== */
+#courses {
+  border-left: 4px solid #dee2e6;
+  padding-left: 1.25rem;
+}
+
+#courses h2 {
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.courses-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.courses-list li {
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.courses-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* ========== Interests ========== */
+#interests .interests-para {
+  margin: 0 0 1rem;
+  color: #444;
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+#interests .interests-para:last-child {
+  margin-bottom: 0;
+}
+
+#interests .interests-para i {
+  margin-right: 0.35rem;
+  color: #6c757d;
+}
+
+/* ========== Teaching ========== */
+.teaching-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.teaching-item {
+  background-color: #fff;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.teaching-course {
+  font-weight: 500;
+  color: #212529;
+}
+
+.teaching-sep {
+  color: #adb5bd;
+  margin: 0 0.35rem;
+}
+
+.teaching-term {
+  color: #495057;
+}
+
+.teaching-duty {
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* ========== MathJax (LaTeX) — prevent overflow, scale on mobile ========== */
+.math-example {
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+/* MathJax 3 chtml output: contain and scroll if needed */
+mjx-container {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+mjx-container[jax="CHTML"][display="true"] {
+  display: block;
+  margin: 0.75rem 0;
+  text-align: center;
+}
+
+/* Keep inline math from breaking layout */
+mjx-container[jax="CHTML"][display="false"] {
+  display: inline;
+}
+
+/* ========== Responsive — under 600px ========== */
+@media (max-width: 600px) {
+  nav ul {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+  }
+
+  main {
+    padding: 4.5rem 20px 2rem;
+  }
+
+  #cv .profile-photo {
+    width: 80px;
+    height: 80px;
+  }
+
+  .experience-cards,
+  .publications-cards {
+    grid-template-columns: 1fr;
+  }
+}

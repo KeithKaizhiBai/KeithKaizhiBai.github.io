@@ -1,0 +1,2 @@
+# For scripts/fetch_publications.py (optional; run to update data/publications.json)
+scholarly>=1.7.0

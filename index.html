@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Site | CV · Experience · Notes</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+  <header>
+    <nav aria-label="Main navigation">
+      <ul>
+        <li><a href="#cv">CV</a></li>
+        <li><a href="#experience">Experience</a></li>
+        <li><a href="#publications">Publications</a></li>
+        <li><a href="#notes">Notes</a></li>
+        <li><a href="#courses">Courses</a></li>
+        <li><a href="#interests">Interests</a></li>
+        <li><a href="#teaching">Teaching</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section id="cv">
+      <h2>CV</h2>
+
+      <div class="personal-card">
+        <img src="./pic/me_snow_mountain.jpg" alt="Profile photo" class="profile-photo" width="120" height="120">
+        <div class="personal-card-content">
+          <h3>Personal Info</h3>
+          <p><strong>Name:</strong> Kaizhi Bai (or Kai-Zhi Bai)</p>
+        <p><strong>Common Name:</strong> Keith Bai (or Keith White)</p>
+        <p><strong>Position:</strong> PhD Candidate</p>
+        <p><strong>Organization:</strong> University of Hong Kong</p>
+        <p><strong>Email:</strong> <a href="mailto:kzbai@connect.hku.hk">kzbai@connect.hku.hk</a>;
+            <a href="mailto:kaizhibai@gmail.com">kaizhibai@gmail.com</a></p>
+        <p class="bio">I am a Ph.D. candidate at the University of Hong Kong, specializing in condensed matter theory.
+            My research focuses on topological phases of matter and quantum transport phenomena, with a strong foundation
+            in quantum mechanics, group theory, and topology. 
+            
+            I have found the first complete exact solution to the three-dimensional topological insulator film,
+            making topological phases, such as Chern insulator, axion insulator and half quantum Hall effect, both analytically accessible in principle and physically understandable, and leading to discovery of
+            novel half quantum topological phases like the metallic quantum anomalous Hall effect, the half-quantized mirror Hall effect and so on.
+            I have developed the first microscopic effective model for polar-stacking bilayer MnBi$_2$Te$_4$ with tunable ferroelectricity, and revealed the interplay between ferroelectricity and anomalous Hall effect,
+            leading to the design of ferroelectrically switchable topological superconductivity.
+            Collaborating with computational physicists, we have discovered high-temperature half quantum Hall effect in crystalline MnBi$_2$Te$_4$/Sb$_2$Te$_3$ heterostructures and its ferroelectrically switchable variant.
+            Recently, collaborating with experimentalists, we employ many-body perturbation theory to investigate disorder effects on quantum transport in sandwiched magnetic topological insulator films,
+            uncovering a semi-elliptic two-parameter flow diagram with half quantum Hall fixed point.
+        </p>
+        </div>
+      </div>
+
+      <section class="education">
+        <h3>Education</h3>
+        <ul>
+          <li><strong>Ph.D. in Condensed Matter Physics</strong> — University of Hong Kong | HKU (2022 - present)</li>
+          <li><strong>B.Sc. in Applied Physics</strong> — University of Science and Technology of China | USTC (2018 - 2022)</li>
+        </ul>
+      </section>
+
+
+      <section class="skills">
+        <h3>Skills</h3>
+        <ul class="skill-tags">
+          <li><span>Python</span></li>
+          <li><span>Matlab</span></li>
+          <li><span>Machine Learning</span></li>
+          <li><span>Latex</span></li>
+          <li><span>Vibe Coding</span></li>
+          <li><span>...</span></li>
+        </ul>
+      </section>
+
+    </section>
+
+    <section id="experience">
+      <h2>Experience</h2>
+
+      <div class="experience-cards">
+        <article class="experience-card">
+          <h3>Disorder-Driven Two-Parameter Flow in Magnetic Topological Insulator Thin Films</h3>
+          <p class="period"><time datetime="2025-09">Sep 2025</time> – present · HKU</p>
+          <ul class="card-description">
+            <li>Employed many-body perturbation theory to investigate disorder effects on quantum transport, uncovering a semi-elliptic two-parameter flow diagram that captures the interplay between disorder strength and topological invariance.</li>
+            <li>Corroborated numerical simulations with experimental data, elucidating the physical mechanism behind disorder-induced phase transitions and associated scaling behavior.</li>
+          </ul>
+          <p class="tech-tags">
+            <span>Many-body theory</span> <span>Quantum transport</span> <span>Numerical simulation</span>
+          </p>
+        </article>
+
+        <article class="experience-card experience-card--conference">
+          <h3>Gordon Research Conference: Topological and Correlated Phases of Quantum Matter</h3>
+          <p class="period"><time datetime="2025-05">May 2025</time> · Barcelona</p>
+          <p class="card-description">Poster presentation at the 2025 GRC on emerging topological and correlated phases.</p>
+          <p class="tech-tags">
+            <span>Poster</span> <span>Conference</span>
+          </p>
+        </article>
+
+        <article class="experience-card">
+          <h3>Ferroelectricity-Modulated Chiral Topological Superconductivity</h3>
+          <p class="period"><time datetime="2024-12">Dec 2024</time> – <time datetime="2025-12">Dec 2025</time> · HKU</p>
+          <ul class="card-description">
+            <li>Derived an effective model via group theory for reversed-stacking bilayer MnBi<sub>2</sub>Te<sub>4</sub>, simplifying degrees of freedom and explaining its ferroelectric mechanism.</li>
+            <li>Analytically derived the topological phase diagram under s-wave superconducting proximity, revealing ferroelectric modulation, supported by numerical verification.</li>
+            <li>Established a general connection between the chiral superconducting topological invariant and the anomalous Hall effect from an algebraic topology perspective.</li>
+          </ul>
+          <p class="tech-tags">
+            <span>Group theory</span> <span>Topological superconductivity</span> <span>Numerical verification</span>
+          </p>
+        </article>
+
+        <article class="experience-card experience-card--conference">
+          <h3>2025 Shenzhen Workshop on Quantum Matter and Transport</h3>
+          <p class="period"><time datetime="2025-01">Jan 2025</time> · Shenzhen</p>
+          <p class="card-description">Oral presentation on “Ferroelectricity-modulated chiral topological superconductivity”.</p>
+          <p class="tech-tags">
+            <span>Oral presentation</span> <span>Conference</span>
+          </p>
+        </article>
+
+        <article class="experience-card">
+          <h3>Topological Phases and Quantum Transport in Magnetic Topological Insulators</h3>
+          <p class="period"><time datetime="2022-09">Sep 2022</time> – <time datetime="2024-12">Dec 2024</time> · HKU</p>
+          <ul class="card-description">
+            <li>Obtained the first exact analytical solution of the Schrödinger equation for the effective model of TI thin films, explaining various topological phases under magnetic order.</li>
+            <li>Discovered the metallic quantum anomalous Hall effect via numerical parameter space scanning and provided a theoretical model via the analytical solution.</li>
+            <li>Predicted the half-quantized mirror Hall effect in magnetic materials, verified numerically.</li>
+            <li>Collaborated on the discovery of high-temperature half-integer QAH effect in MnBi<sub>2</sub>Te<sub>4</sub>/Sb<sub>2</sub>Te<sub>3</sub> heterostructure and a ferroelectrically switchable variant, elucidating the theoretical mechanism.</li>
+          </ul>
+          <p class="tech-tags">
+            <span>Analytical solution</span> <span>Quantum transport</span> <span>Topological phases</span> <span>Numerical simulation</span>
+          </p>
+        </article>
+
+        <article class="experience-card experience-card--conference">
+          <h3>International Workshop on Topological Quantum Transport (T-Q-T)</h3>
+          <p class="period"><time datetime="2024-06">Jun 2024</time> · Huangshan</p>
+          <p class="card-description">Participated in the international workshop on topological quantum transport.</p>
+          <p class="tech-tags">
+            <span>Participated</span> <span>Conference</span>
+          </p>
+        </article>
+
+        <article class="experience-card">
+          <h3>Many-body Calculation of Exciton Binding Energy vs. Bandgap Relationship</h3>
+          <p class="period"><time datetime="2021-12">Dec 2021</time> – <time datetime="2022-06">Jun 2022</time> · USTC</p>
+          <ul class="card-description">
+            <li>Employed multi-scale, high-precision simulations (DFT-GW-BSE first-principles methods) to investigate the exciton binding energy–bandgap relation, discovering and validating a linear scaling law.</li>
+          </ul>
+          <p class="tech-tags">
+            <span>First-principles</span> <span>DFT-GW-BSE</span>
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="publications">
+      <h2>Publications</h2>
+      <p class="publications-intro">
+        <a href="https://scholar.google.com/citations?user=LZcqZqYAAAAJ&hl=en" target="_blank" rel="noopener">View full list on Google Scholar</a>
+      </p>
+      <div class="publications-cards" aria-live="polite">
+        <p class="publications-loading">Loading publications…</p>
+      </div>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+
+      <div class="notes-block">
+        <h3 class="notes-subtitle">📚 Systematic notes</h3>
+        <ul class="notes-pdf-list">
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/QM.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Quantum Mechanics</a>
+            <p class="notes-pdf-desc">Introduction to quantum mechanics; references include Sakurai, Fradkin, etc.</p>
+          </li>
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/GTnote.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Group Theory</a>
+            <p class="notes-pdf-desc">Introduction to group theory; references include <a href="https://www.physics.rutgers.edu/~gmoore/618Spring2019/GroupTheory-Spring2019.html" target="_blank" rel="noopener noreferrer">Moore course notes</a>, <a href="https://journals.aps.org/rmp/abstract/10.1103/RevModPhys.51.591" target="_blank" rel="noopener noreferrer">Mermin review</a> on topological defects, etc.</p>
+          </li>
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/TIfilm.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Topological insulator films</a>
+            <p class="notes-pdf-desc">Original notes on the physics of topological insulator thin films.</p>
+          </li>
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/SM.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Statistical Mechanics (On going)</a>
+            <p class="notes-pdf-desc">Notes on statistical mechanics, to be ...</p>
+          </li>
+          <li class="notes-pdf-item">
+            <a href="#" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Probability, Statistics, Stochastic Process and Machine Learning (Planning)</a>
+            <p class="notes-pdf-desc">Notes on probability, statistics, stochastic processes and machine learning, to be written</p>
+          </li>
+        </ul>
+      </div>
+
+      <div class="notes-block">
+        <h3 class="notes-subtitle">📌 Fragment notes</h3>
+        <ul class="notes-pdf-list">
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/AI_Course.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> AI Course</a>
+            <p class="notes-pdf-desc">Organized notes from the HKU AI course.</p>
+          </li>
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/thermalH_sc.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Thermal Hall Effect</a>
+            <p class="notes-pdf-desc">Notes on the thermal Hall effect in crystalline systems, mainly for fermions but can be easily generalized. 
+                Mainly following <a href="https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.107.236601" target="_blank" rel="noopener noreferrer">Qin et al</a>.</p>
+          </li>
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/halfmag.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Landau Level Physics of Gapless Dirac Fermion</a>
+            <p class="notes-pdf-desc">Notes on the Landau level physics of gapless Dirac fermions, such as the quantum Hall effect, magnetic field driven half-to-integer crossover in disordered system and the parity anomaly. 
+                Mainly following <a href="https://journals.aps.org/prb/abstract/10.1103/PhysRevB.109.075113" target="_blank" rel="noopener noreferrer">Wang et al</a>.</p>
+          </li>
+          <!--<li class="notes-pdf-item">
+            <a href="note_pdfs/TiMetal.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Proximity Effect at TI/SC Interface</a>
+            <p class="notes-pdf-desc">Original note on the proximity effect at topological insulator/superconductor interfaces.</p>
+          </li>-->
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/N2QASM.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Weak Topological Insulator Film</a>
+            <p class="notes-pdf-desc">Original note on the solution to the N=2 QASM problem in weak topological insulator films.</p>
+          </li>
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/tsc.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Topological Superconductor</a>
+            <p class="notes-pdf-desc">Original note on the introduction to topological superconductors and its form in topological insulator systems.</p>
+          </li>
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/tiflux.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Flux Effect in TI and TSC</a>
+            <p class="notes-pdf-desc">Note on the flux effect in topological insulator and topological superconductor systems, including wormhole effect and vortex Majorana fermions.</p>
+          </li>
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/Axionmetal.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Axion Metal</a>
+            <p class="notes-pdf-desc">Original note on the axion metal phase in topological insulator systems.</p>
+          </li>
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/TB_Cal.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Tight-Binding Calculation</a>
+            <p class="notes-pdf-desc">Personal note on simple tight-binding calculations.</p>
+          </li>
+          <li class="notes-pdf-item">
+            <a href="note_pdfs/tc.pdf" class="notes-pdf-link" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Introduction to Time Crystal</a>
+            <p class="notes-pdf-desc">Personal note on the introduction to time crystals.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="courses">
+      <h2>📚 Courses</h2>
+      <ul class="courses-list">
+        <li>Quantum Mechanics</li>
+        <li>Statistical Mechanics</li>
+        <li>Quantum Many-Body Theory</li>
+        <li>Solid State Physics</li>
+        <li>Stochastic Processes</li>
+        <li>Group Theory</li>
+        <li>Differential Geometry and Topology</li>
+      </ul>
+    </section>
+
+    <section id="interests">
+      <h2>🧪 Interests</h2>
+      <p class="interests-para"><i class="fa-solid fa-flask" aria-hidden="true"></i> <strong>Research:</strong> I am eager to contribute my expertise and collaborate on cutting-edge research in condensed matter physics. I look
+        forward to the opportunity to further my research and make significant contributions to the field. First of all, I plan
+        to continue to promote the exact analytical solution of the Schrödinger equation for complex systems to including interaction and disorder effects, which can serve
+        as a benchmark for numerical simulations and provide deeper insights into the underlying physics. Secondly,
+        I aim to explore the interplay between topology and symmetry in novel quantum materials, potentially leading to the
+        discovery of new topological phases and transport phenomena. Meanwhile, I am interested in investigation of novel
+        quantum orders and their potential applications in quantum computing and spintronics. 
+        Furthermore, I intend to apply machine learning techniques to analyze large datasets from experiments and simulations, uncovering hidden patterns and accelerating the discovery of new materials and phenomena.
+        Finally, I intend to strengthen my collaboration with experimental groups to validate theoretical predictions and contribute to the advancement of
+        condensed matter physics.
+        I am also open to interdisciplinary research opportunities that allow me to apply my skills and knowledge to other fields, such as quantum information science, materials science, and computational physics.
+      </p>
+      <p class="interests-para"><i class="fa-solid fa-heart" aria-hidden="true"></i> <strong>Daily:</strong> 
+        Psychology, philosophy, music, movies, games, hiking, traveling, etc.
+        I have been quite interested in works of Arthur Schopenhauer, Carl Jung, Albert Camus, Owen Yaron and so on.
+        Nevertheless, I prefer more to actually experience the world and interact with people rather than just reading about them, 
+        and I am always open to new experiences and enjoy exploring different cultures and perspectives.
+        I think that's why I have been quite interested in traveling and hiking, which allow me to connect with nature and different cultures, and also provide a refreshing break from academic work.
+        I believe that a well-rounded life outside of academia can enrich my research and personal growth, and I am eager to connect with others who share similar interests.
+      </p>
+    </section>
+
+    <section id="teaching">
+      <h2>🧑‍🏫 Teaching</h2>
+      <ul class="teaching-list">
+        <li class="teaching-item"><span class="teaching-course">Statistical Mechanics</span> <span class="teaching-sep">/</span> <span class="teaching-term">Fall 2023, Spring 2026</span> <span class="teaching-sep">/</span> <span class="teaching-duty">Problem sessions, grading.</span></li>
+        <li class="teaching-item"><span class="teaching-course">Quantum Mechanics</span> <span class="teaching-sep">/</span> <span class="teaching-term">Fall 2024-2026</span> <span class="teaching-sep">/</span> <span class="teaching-duty">Tutorials, problem sessions, grading.</span></li>
+        <li class="teaching-item"><span class="teaching-course">Classical Mechanics</span> <span class="teaching-sep">/</span> <span class="teaching-term">Spring 2023-2025</span> <span class="teaching-sep">/</span> <span class="teaching-duty">Tutorials, problem sessions, grading.</span></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
