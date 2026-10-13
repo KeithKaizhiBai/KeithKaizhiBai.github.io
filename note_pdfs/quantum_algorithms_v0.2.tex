@@ -1,0 +1,2224 @@
+% Standalone export; active source: latex/v0.2/quantum_algorithms.tex
+\documentclass[11pt,oneside,openany]{book}
+\usepackage[a4paper,top=24mm,bottom=24mm,left=25mm,right=25mm,headheight=15pt]{geometry}
+\usepackage{fontspec}
+\usepackage{amsmath,amssymb,amsthm,mathtools,bm}
+\usepackage{booktabs,longtable,array}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,decorations.pathreplacing}
+\usepackage{quantikz}
+\usepackage{xcolor,graphicx,fancyhdr,needspace}
+\usepackage[section]{placeins}
+\usepackage[unicode,hidelinks]{hyperref}
+\hypersetup{pdftitle={Quantum Algorithms: Theory, Circuits, and Numerical Experiments},pdfsubject={Graduate lecture notes, version 0.2},pdflang={en}}
+\definecolor{noteink}{RGB}{32,58,78}
+\providecommand{\ket}{}
+\renewcommand{\ket}[1]{\lvert #1\rangle}
+\providecommand{\bra}{}
+\renewcommand{\bra}[1]{\langle #1\rvert}
+\providecommand{\braket}{}
+\renewcommand{\braket}[2]{\langle #1\vert #2\rangle}
+\newcommand{\ketbra}[2]{\lvert #1\rangle\langle #2\rvert}
+\newcommand{\ii}{\mathrm{i}}
+\newcommand{\Ftwo}{\mathbb F_2}
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator{\Span}{span}
+\DeclareMathOperator{\diag}{diag}
+\newtheorem{proposition}{Proposition}[chapter]
+\newtheorem{lemma}[proposition]{Lemma}
+\newtheorem{theorem}[proposition]{Theorem}
+\theoremstyle{definition}
+\newtheorem{example}[proposition]{Example}
+\newtheorem{definition}[proposition]{Definition}
+\allowdisplaybreaks[2]
+\setlength{\parindent}{1.5em}
+\setlength{\parskip}{3pt}
+\setlength{\emergencystretch}{2em}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Quantum Algorithms}
+\fancyhead[R]{\small Graduate Lecture Notes}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\begin{document}
+\frontmatter
+\begin{titlepage}
+\vspace*{25mm}
+\begin{center}
+{\Huge\bfseries Quantum Algorithms\par}
+\vspace{9mm}
+{\Large Theory, Circuits, and Numerical Experiments\par}
+\vspace{15mm}
+{\large Graduate Lecture Notes\par}
+\vspace{6mm}
+{\large Version 0.2\par}
+\vspace{22mm}
+\begin{minipage}{0.82\textwidth}
+Quantum query algorithms extract global properties through phase kickback and interference. Their circuit implementations require explicit accounting for gate costs, auxiliary registers, and reversible computation. Fourier methods resolve eigenphases and periods; amplitude amplification increases the probability of a specified measurement outcome. These notes develop the state evolution, measurement statistics, and computational assumptions of each construction.
+\end{minipage}
+\vfill
+October 2026\par
+\end{center}
+\end{titlepage}
+\chapter*{Notation and Computational Conventions}
+\addcontentsline{toc}{chapter}{Notation and Computational Conventions}
+These notes assume finite-dimensional linear algebra and elementary probability. An $n$-qubit state is a unit vector in $(\mathbb C^2)^{\otimes n}$. Gates act unitarily; measuring $\sum_x\alpha_x\ket x$ in the computational basis gives outcome $x$ with probability $|\alpha_x|^2$.
+
+Let $\Sigma=\{0,1\}$. For $x=x_{n-1}\cdots x_0\in\Sigma^n$, the integer and tensor-product conventions are
+\begin{equation}
+ x=\sum_{j=0}^{n-1}2^j x_j,\qquad
+ \ket x=\ket{x_{n-1}}\otimes\cdots\otimes\ket{x_0}.
+\end{equation}
+The top circuit wire is the most significant bit; time runs from left to right. Register order follows the figure: $\ket x_X\ket y_Y=\ket x_X\otimes\ket y_Y$ when $X$ appears above $Y$. The first gate applied is the rightmost matrix factor.
+
+The symbol $\oplus$ denotes bitwise addition over $\Ftwo$. The binary inner product is $s\cdot x=\bigoplus_j s_jx_j$. In exponents of $(-1)$, ordinary integer sums may equivalently be reduced modulo two. The symbol $\ii$ denotes $\sqrt{-1}$. All phases and probabilities are dimensionless. A global phase leaves the measurement statistics of a state invariant; a phase multiplying a controlled operation can become a relative phase between control branches.
+
+Circuit symbols follow Nielsen and Chuang\cite{NC2010}: solid lines carry qubits; filled and open controls require $\ket1$ and $\ket0$; $\oplus$ denotes an $X$ target; crossed targets denote SWAP; and a meter denotes computational-basis measurement. Double lines carry classical outcomes.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[row sep=0.55cm,column sep=0.5cm]
+\lstick{$\ket a$} & \gate{H} & \ctrl{1} & \octrl{1} & \swap{1} & \meter{} & \setwiretype{c} \\
+\lstick{$\ket b$} & \qw & \targ{} & \gate{U} & \targX{} & \qw & \qw
+\end{quantikz}
+\caption{Circuit notation: a Hadamard gate, CNOT, zero-controlled $U$, SWAP, and measurement. This diagram illustrates symbols rather than an algorithm.}
+\end{figure}
+A labeled wire may represent a register. A register-wide exclusive-or copy, $\mathrm{CNOT}^{\otimes m}$, consists of $m$ CNOTs. Query complexity counts oracle calls; total gate complexity also includes preparation, oracle implementation, arithmetic, and uncomputation.
+
+The Fourier convention is
+\begin{equation}
+ F_N\ket x=\frac1{\sqrt N}\sum_{y=0}^{N-1}e^{2\pi\ii xy/N}\ket y.
+\end{equation}
+Phase estimation therefore uses $F_N^\dagger$ to decode the phase wave produced by controlled powers. The final bit reversal of the standard QFT circuit is included whenever its output is interpreted as an integer in the convention above.
+\setcounter{tocdepth}{1}
+\tableofcontents
+\mainmatter
+\chapter{Quantum Query Algorithms}
+\label{chap:query}
+
+Quantum query algorithms study how coherent access to an unknown function can reveal properties of that function. Their resource measure is the number of oracle calls. Deutsch's algorithm extracts the parity of two function values; the Deutsch--Jozsa algorithm tests a promise about a truth table; Bernstein--Vazirani recovers a hidden linear coefficient; and Simon's algorithm samples linear constraints on a hidden period. These examples develop a common sequence of ideas: reversible function evaluation, phase encoding, interference, and classical interpretation of measurement outcomes.
+
+\section{The query model}
+\label{sec:query-model}
+
+\subsection{Oracle access and promise problems}
+A computational model specifies how an input is processed to obtain an output. Turing machines, Boolean circuits, and quantum circuits provide different realizations of this abstraction.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=stealth]
+\node[draw,minimum width=3.1cm,minimum height=.9cm] (c) at (0,0) {Computation};
+\node (i) at (-3.4,0) {Input}; \node (o) at (3.4,0) {Output};
+\draw[->] (i)--(c); \draw[->] (c)--(o);
+\node[align=center] at (0,-1.3) {Turing machines, Boolean circuits, quantum circuits};
+\end{tikzpicture}
+\caption{The input--computation--output abstraction. The internal computational model remains unspecified.}
+\label{fig:computation-model}
+\end{figure}
+\par
+An assessment of efficiency can include time, memory, energy, and implementation costs. The query model isolates the cost of obtaining information about an unknown function. Computation involving known operations is allowed between queries, while each oracle invocation counts as one query. A query bound therefore has to be distinguished from a bound on the total number of elementary gates.
+
+Let $\Sigma=\{0,1\}$ and consider an unknown function
+\begin{equation}
+ f:\Sigma^n\longrightarrow\Sigma^m,\qquad n,m\geq1.
+\end{equation}
+A classical query selects an argument $x$ and receives $f(x)$. Later arguments may depend on earlier answers. The unknown input to the overall problem is the function $f$; the final answer may be a global property of $f$ rather than an individual value.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=stealth]
+\node[draw,minimum width=3.2cm,minimum height=.8cm] (f) at (0,1.3) {Oracle for $f$};
+\node[draw,minimum width=3.2cm,minimum height=.8cm] (a) at (0,-.7) {Algorithm $A$};
+\draw[->] (-.7,-.3)--node[left] {$x$}(-.7,.9);
+\draw[->] (.7,.9)--node[right] {$f(x)$}(.7,-.3);
+\draw[->] (1.6,-.7)--(3,-.7) node[right] {Answer};
+\end{tikzpicture}
+\caption{Classical oracle access. Each evaluation of $f$ counts as one query, including in an adaptive algorithm.}
+\label{fig:oracle-model}
+\end{figure}
+\par
+\FloatBarrier
+The success criterion is part of the model. A deterministic exact algorithm must return the correct answer on every allowed input. A randomized bounded-error algorithm must satisfy a specified success probability on every allowed input. Comparisons of query complexity will state which criterion is being used.
+
+With $N=2^n$, representative problems include the following.
+\begin{enumerate}
+\item For $f:\Sigma^n\to\Sigma$, compute
+\begin{equation}
+ \operatorname{OR}(f)=\bigvee_{x\in\Sigma^n}f(x).
+\end{equation}
+The output is $1$ if any value equals $1$, and $0$ otherwise.
+\item Compute the parity of the truth table,
+\begin{equation}
+ \operatorname{Parity}(f)=\bigoplus_{x\in\Sigma^n}f(x)
+ =\left(\sum_{x\in\Sigma^n}f(x)\right)\bmod2.
+\end{equation}
+This is the parity of the number of inputs mapped to $1$. Deutsch's problem is the case $n=1$.
+\item For $f:\Sigma^n\to\Sigma^m$, find the minimum output value
+\begin{equation}
+ y_{\min}=\min_{\mathrm{lex}}\{f(x):x\in\Sigma^n\}.
+\end{equation}
+Lexicographic order uses $0<1$ at the first differing bit. For equal-length strings written with the most significant bit first, it agrees with integer order. Finding an input attaining the minimum is a distinct output specification and may require a convention for ties.
+\item Under the promise that exactly one $z\in\Sigma^n$ satisfies
+\begin{equation}
+ f(z)=1,\qquad f(x)=0\quad(x\ne z),
+\end{equation}
+find $z$.
+\end{enumerate}
+A \emph{promise} restricts the admissible input functions. The success requirement applies within that set; an algorithm need not have a prescribed interpretation on functions outside it. Unique search excludes both absent and multiple solutions. The algorithms below use promises about the structure of the function.
+
+\subsection{Reversible quantum queries}
+A classical Boolean module can map an $n$-bit input directly to an $m$-bit output.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=stealth]
+\node[draw,minimum width=1.1cm,minimum height=1.4cm] (f) at (0,0) {$f$};
+\draw[->] (-2.2,0)--node[above] {$x$: $n$ bits}(f);
+\draw[->] (f)--node[above] {$f(x)$: $m$ bits}(3,0);
+\end{tikzpicture}
+\caption{A Boolean function-evaluation module. Its output can feed subsequent classical gates.}
+\end{figure}
+\par
+A closed-system quantum gate is a unitary operator on a fixed Hilbert space. The assignment $\ket{x}\mapsto\ket{f(x)}$ generally fails to define such a gate: if $x\ne x'$ but $f(x)=f(x')$, it maps two orthogonal states to the same state and hence fails to preserve their inner product. Retaining the input and using a separate output register gives the standard XOR oracle,
+\begin{equation}
+ \boxed{U_f\ket{x}\ket{y}=\ket{x}\ket{y\oplus f(x)}}.
+ \label{eq:xor-oracle}
+\end{equation}
+Here $x\in\Sigma^n$, $y\in\Sigma^m$, and $\oplus$ denotes bitwise addition modulo $2$; for example, $001\oplus101=100$. The input register precedes the work register in the tensor product and appears above it in the circuit.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}
+ \lstick{$\ket{x}$} & \qwbundle{n} & \gate[2]{U_f} & \qwbundle{n} & \rstick{$\ket{x}$}\qw \\
+ \lstick{$\ket{y}$} & \qwbundle{m} & & \qwbundle{m} & \rstick{$\ket{y\oplus f(x)}$}\qw
+\end{quantikz}
+\caption{The reversible XOR oracle. Bundled lines denote complete registers of the indicated sizes.}
+\label{fig:xor-oracle}
+\end{figure}
+\par
+The mapping $(x,y)\mapsto(x,y\oplus f(x))$ is a permutation of the computational basis, since
+\begin{align}
+ U_f^2\ket{x}\ket{y}
+ &=\ket{x}\ket{y\oplus f(x)\oplus f(x)}\notag\\
+ &=\ket{x}\ket{y}.
+\end{align}
+Consequently $U_f^{-1}=U_f^\dagger=U_f$, irrespective of whether $f$ itself is injective. A zero work register yields ordinary function evaluation while preserving the input:
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}
+ \lstick{$\ket{x}$} & \qwbundle{n} & \gate[2]{U_f} & \qwbundle{n} & \rstick{$\ket{x}$}\qw \\
+ \lstick{$\ket{0^m}$} & \qwbundle{m} & & \qwbundle{m} & \rstick{$\ket{f(x)}$}\qw
+\end{quantikz}
+\caption{Evaluation of $f(x)$ into a zero-initialized work register.}
+\label{fig:zero-oracle}
+\end{figure}
+\par
+For a superposition, linearity gives
+\begin{equation}
+ U_f\sum_x\alpha_x\ket{x}\ket{0^m}
+ =\sum_x\alpha_x\ket{x}\ket{f(x)}.
+\end{equation}
+A measurement supplies a sampled outcome, so this state does not allow all function values to be read at once. An algorithm must arrange subsequent interference so that the measured distribution encodes the property being sought.
+
+\section{Deutsch's algorithm}
+\label{sec:deutsch}
+For $f:\Sigma\to\Sigma$, the four possible truth tables are
+\begin{center}
+\begin{tabular}{c|cccc}
+ $x$ & $f_1(x)$ & $f_2(x)$ & $f_3(x)$ & $f_4(x)$\\ \hline
+ $0$ & $0$ & $0$ & $1$ & $1$\\
+ $1$ & $0$ & $1$ & $0$ & $1$\\ \hline
+ Type & Constant & Balanced & Balanced & Constant
+\end{tabular}
+\end{center}
+The task is to compute
+\begin{equation}
+ d=f(0)\oplus f(1)=
+ \begin{cases}0,&f\text{ is constant},\\1,&f\text{ is balanced}.
+ \end{cases}
+ \label{eq:deutsch-answer}
+\end{equation}
+One classical query cannot distinguish the two types: the answer $f(0)=0$, for example, is compatible with both $f_1$ and $f_2$. Thus a deterministic exact classical algorithm needs two queries, followed by XOR.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=stealth]
+\node[draw] (f0) at (0,.65) {$f$}; \node[draw] (f1) at (0,-.65) {$f$};
+\node[draw,minimum height=1.5cm] (xor) at (2.5,0) {XOR};
+\draw[->] (-1.6,.65) node[left] {$0$}--(f0);
+\draw[->] (-1.6,-.65) node[left] {$1$}--(f1);
+\draw[->] (f0)--node[above] {$f(0)$}(xor.north west);
+\draw[->] (f1)--node[below] {$f(1)$}(xor.south west);
+\draw[->] (xor)--(4.4,0) node[right] {$d$};
+\end{tikzpicture}
+\caption{The classical exact solution uses two function evaluations and XOR.}
+\label{fig:deutsch-classical}
+\end{figure}
+\par
+
+\subsection{Phase encoding and state evolution}
+Use the single-qubit gates
+\begin{equation}
+ H=\frac1{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix},\qquad
+ X=\begin{pmatrix}0&1\\1&0\end{pmatrix},
+\end{equation}
+and the states
+\begin{equation}
+ \ket{+}=\frac{\ket0+\ket1}{\sqrt2}=H\ket0,\qquad
+ \ket{-}=\frac{\ket0-\ket1}{\sqrt2}=H\ket1.
+\end{equation}
+The quantum circuit initializes the input to $\ket0$ and the work qubit to $\ket1$.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}
+ \lstick{$\ket0_x$} & \gate{H} & \gate[2]{U_f} & \gate{H} & \meter{} & \rstick{$d$}\setwiretype{c} \\
+ \lstick{$\ket1_y$} & \gate{H} & & \qw & \qw & \qw
+\end{quantikz}
+\caption{Deutsch's one-query circuit. Only the input qubit is measured, with $0$ indicating a constant function and $1$ a balanced function.}
+\label{fig:deutsch-quantum}
+\end{figure}
+\par
+Starting from $\ket{\psi_0}=\ket0\ket1$, the first Hadamard layer produces
+\begin{align}
+ \ket{\psi_1}&=(H\otimes H)\ket0\ket1=\ket+\ket-\notag\\
+ &=\frac12\left[\ket0(\ket0-\ket1)+\ket1(\ket0-\ket1)\right].
+\end{align}
+Bitwise XOR on the work qubit is a power of $X$: $\ket{b\oplus c}=X^c\ket b$. Since
+\begin{align}
+ X\ket-&=\frac{\ket1-\ket0}{\sqrt2}=-\ket-,\\
+ X^{f(x)}\ket-&=(-1)^{f(x)}\ket-,
+\end{align}
+each input branch satisfies
+\begin{align}
+ U_f\ket x\ket-
+ &=\frac1{\sqrt2}\ket x\left(\ket{0\oplus f(x)}-\ket{1\oplus f(x)}\right)\notag\\
+ &=(-1)^{f(x)}\ket x\ket-.
+ \label{eq:phase-kickback}
+\end{align}
+The work qubit is an eigenstate of the controlled operation, so the action appears as a phase on the controlling branch. This mechanism is called \emph{phase kickback}. By linearity,
+\begin{align}
+ \ket{\psi_2}
+ &=\frac{(-1)^{f(0)}\ket0+(-1)^{f(1)}\ket1}{\sqrt2}\otimes\ket-\notag\\
+ &=(-1)^{f(0)}\frac{\ket0+(-1)^{f(0)\oplus f(1)}\ket1}{\sqrt2}\otimes\ket-.
+ \label{eq:deutsch-pre-last-h}
+\end{align}
+Integer addition in a phase exponent can be replaced by addition modulo $2$ because $(-1)^k$ depends only on parity. The factor $(-1)^{f(0)}$ multiplies the entire state and is unobservable as a global phase. The remaining sign distinguishes $\ket+$ from $\ket-$ in the input register.
+
+Because $H\ket+=\ket0$ and $H\ket-=\ket1$, the final layer gives
+\begin{equation}
+ \ket{\psi_3}=(H\otimes I)\ket{\psi_2}
+ =(-1)^{f(0)}\ket d\ket-.
+\end{equation}
+The interference can also be displayed directly:
+\begin{align}
+ \ket{\psi_3}=
+ \left[\frac{(-1)^{f(0)}+(-1)^{f(1)}}2\ket0
+ +\frac{(-1)^{f(0)}-(-1)^{f(1)}}2\ket1\right]\otimes\ket-.
+\end{align}
+Equal function values cancel the $\ket1$ amplitude, and unequal values cancel the $\ket0$ amplitude. Measurement therefore returns $d$ with certainty after one oracle call and three Hadamard gates. The circuit extracts a relation between the two function values; it does not supply both values as separately readable outputs.
+
+\section{The Deutsch--Jozsa algorithm}
+\label{sec:dj}
+Let $f:\Sigma^n\to\Sigma$ satisfy one of two promises:
+\begin{equation}
+ \begin{cases}
+ \text{Constant: }f(x)=c\text{ for all }x,\quad c\in\Sigma;\\
+ \text{Balanced: }\#\{x:f(x)=0\}=\#\{x:f(x)=1\}=2^{n-1}.
+ \end{cases}
+\end{equation}
+The task is to distinguish these cases. They exhaust the possible functions for $n=1$, but not for $n\ge2$. The domain is $\Sigma^n$, containing $2^n$ arguments.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}
+ \lstick{$\ket{0^n}_x$} & \qwbundle{n} & \gate{H^{\otimes n}} & \gate[2]{U_f} & \gate{H^{\otimes n}} & \meter{} & \qwbundle{n}\setwiretype{c} & \rstick{$z$} \\
+ \lstick{$\ket1_y$} & \qw & \gate{H} & & \qw & \qw & \qw & \qw
+\end{quantikz}
+\caption{The Deutsch--Jozsa circuit. The $n$-qubit input register undergoes two Hadamard layers and is measured; the work qubit remains in $\ket-$.}
+\label{fig:dj-circuit}
+\end{figure}
+\par
+
+\subsection{Hadamard interference on a binary register}
+Write $x=x_{n-1}\cdots x_0$ with the most significant bit first and define
+\begin{equation}
+ x\cdot z=\bigoplus_{j=0}^{n-1}x_jz_j\in\Ftwo.
+ \label{eq:binary-inner}
+\end{equation}
+From the single-qubit identity
+\begin{equation}
+ H\ket a=\frac1{\sqrt2}\sum_{b\in\Sigma}(-1)^{ab}\ket b,
+ \qquad a\in\Sigma,
+\end{equation}
+the tensor product expands as
+\begin{align}
+ H^{\otimes n}\ket x
+ &=\bigotimes_{j=n-1,\ldots,0}\left(\frac1{\sqrt2}\sum_{z_j\in\Sigma}(-1)^{x_jz_j}\ket{z_j}\right)\notag\\
+ &=\frac1{\sqrt{2^n}}\sum_{z_{n-1},\ldots,z_0\in\Sigma}
+ \left(\prod_{j=0}^{n-1}(-1)^{x_jz_j}\right)\ket{z_{n-1}\cdots z_0}\notag\\
+ &=\frac1{\sqrt{2^n}}\sum_{z\in\Sigma^n}(-1)^{x\cdot z}\ket z.
+ \label{eq:hadamard-n}
+\end{align}
+The phase product becomes $(-1)^{\sum_jx_jz_j}$, whose exponent can be reduced modulo $2$. Thus $H^{\otimes n}$ is the Fourier transform on the binary additive group.
+
+Set $N=2^n$ and initialize $\ket{\psi_0}=\ket{0^n}\ket1$. The first Hadamard layer and the oracle produce, respectively,
+\begin{align}
+ \ket{\psi_1}&=\frac1{\sqrt N}\sum_x\ket x\ket-,\\
+ \ket{\psi_2}&=\frac1{\sqrt N}\sum_x(-1)^{f(x)}\ket x\ket-.
+\end{align}
+Applying Eq.~\eqref{eq:hadamard-n} to the input register gives
+\begin{align}
+ \ket{\psi_3}
+ &=(H^{\otimes n}\otimes I)\ket{\psi_2}\notag\\
+ &=\frac1N\sum_{x,z\in\Sigma^n}(-1)^{f(x)+x\cdot z}\ket z\ket-\notag\\
+ &=\sum_{z\in\Sigma^n}A_f(z)\ket z\ket-,
+ \label{eq:dj-final-state}\\
+ A_f(z)&=\frac1N\sum_x(-1)^{f(x)+x\cdot z}.
+ \label{eq:dj-amplitude}
+\end{align}
+For the all-zero outcome, the phase factor involving $x\cdot z$ equals $1$. If $N_b=\#\{x:f(x)=b\}$, then
+\begin{align}
+ A_f(0^n)&=\frac1N\sum_x(-1)^{f(x)}=\frac{N_0-N_1}{N},\\
+ P(z=0^n)&=\left|\frac{N_0-N_1}{N}\right|^2.
+ \label{eq:dj-zero-probability}
+\end{align}
+A constant function has $N_0-N_1=\pm N$, whereas a balanced function has $N_0-N_1=0$. Within the promise,
+\begin{equation}
+ z=0^n\Longrightarrow\text{constant},\qquad
+ z\ne0^n\Longrightarrow\text{balanced}.
+\end{equation}
+Which nonzero string appears in the balanced case depends on $f$. Outside the promise, the circuit need not return a deterministic classification: for example, a two-bit function with exactly one value equal to $1$ has $P(00)=(3-1)^2/4^2=1/4$.
+
+\subsection{Exact and bounded-error query complexity}
+The quantum algorithm is exact with one oracle query and $2n+1$ Hadamard gates. The internal cost of implementing $U_f$ is excluded from this count.
+
+The optimal worst-case deterministic classical query count is
+\begin{equation}
+ D_{\mathrm{DJ}}=N/2+1=2^{n-1}+1.
+ \label{eq:dj-classical-exact}
+\end{equation}
+For the upper bound, query $N/2+1$ distinct inputs. Two unequal answers certify a balanced function. If all answers coincide, a balanced function cannot account for more than $N/2$ such answers, so the function must be constant. For the lower bound, an adversary can answer $0$ on any set of at most $N/2$ distinct queried arguments. The record is compatible both with a constant-zero function and with a balanced function whose zero set contains those arguments. Hence fewer queries do not always suffice.
+
+A randomized procedure independently samples $k\ge1$ arguments uniformly with replacement, answers ``constant'' if all observed values coincide, and answers ``balanced'' otherwise. It never errs on a constant function. For a balanced function the observed values are independent fair bits, and
+\begin{align}
+ P(\text{balanced classified as constant})
+ &=P(\text{all }0)+P(\text{all }1)\notag\\
+ &=2(1/2)^k=2^{1-k}.
+ \label{eq:dj-random-error}
+\end{align}
+Taking $k\ge1+\lceil\log_2(1/\varepsilon)\rceil$ makes this error at most $\varepsilon$, independently of $n$. With uniform sampling without replacement the error is
+\begin{equation}
+ \frac{2\binom{N/2}{k}}{\binom Nk}\le2^{1-k}\qquad(k\le N/2),
+\end{equation}
+and is zero for $k>N/2$. The exponential separation concerns deterministic exact classical computation. At fixed tolerated error, the classical randomized query count is already constant.
+
+\section{The Bernstein--Vazirani algorithm}
+\label{sec:bv}
+Suppose $f:\Sigma^n\to\Sigma$ is promised to be linear,
+\begin{equation}
+ f(x)=s\cdot x\qquad\text{for every }x\in\Sigma^n,
+ \label{eq:bv-promise}
+\end{equation}
+for an unknown string $s=s_{n-1}\cdots s_0$. The task is to recover $s$. The circuit is the same as Fig.~\ref{fig:dj-circuit}, but every measured bit is now part of the answer.
+
+For any $a\in\Sigma^n$, binary character orthogonality follows by factorization:
+\begin{align}
+ \sum_{x\in\Sigma^n}(-1)^{a\cdot x}
+ &=\prod_{j=0}^{n-1}\left(\sum_{x_j=0}^1(-1)^{a_jx_j}\right)\notag\\
+ &=\prod_{j=0}^{n-1}\left(1+(-1)^{a_j}\right)\notag\\
+ &=\begin{cases}2^n,&a=0^n,\\0,&a\ne0^n.
+ \end{cases}
+ \label{eq:character-orthogonality}
+\end{align}
+Any nonzero bit $a_j$ contributes a vanishing factor; when $a=0^n$, every factor equals $2$. Substitution into Eq.~\eqref{eq:dj-amplitude} yields
+\begin{align}
+ A_f(z)&=\frac1{2^n}\sum_x(-1)^{s\cdot x+x\cdot z}\notag\\
+ &=\frac1{2^n}\sum_x(-1)^{(s\oplus z)\cdot x}\notag\\
+ &=\begin{cases}1,&z=s,\\0,&z\ne s.
+ \end{cases}
+\end{align}
+The final state is therefore $\ket{\psi_3}=\ket s\ket-$, including the case $s=0^n$. If the promise is extended to $f(x)=s\cdot x\oplus b$, the same circuit acquires the global phase $(-1)^b$ and recovers $s$ without recovering $b$.
+
+Classically, querying the $n$ standard basis vectors $e_j$ gives $f(e_j)=s_j$, so $n$ queries suffice. Each query supplies one linear condition on $s$; $q<n$ queries leave a coefficient matrix of rank at most $q$ and therefore at least $2^{n-q}$ consistent candidates. Exact recovery is impossible in that case. The same argument gives a bounded-error lower bound. For a uniformly distributed $s$, fixing a classical algorithm's randomness and transcript leaves a uniform distribution over the consistent solutions, even with adaptive queries. The conditional success probability is at most
+\begin{equation}
+ 2^{q-n}\le\frac12\qquad(q<n).
+\end{equation}
+Averaging over transcripts and internal randomness preserves this bound. A success probability of at least $2/3$ on every $s$ therefore requires at least $n$ worst-case classical queries. The quantum algorithm uses one exact query and $O(n)$ other gates.
+
+The basic Bernstein--Vazirani problem has an $n$-versus-$1$ query separation. Recursive Fourier sampling introduces additional recursive structure and yields a superpolynomial separation relative to an oracle~\cite{BV1997}. That result concerns a different problem; neither the recursion nor an exponential separation follows from the linear promise in Eq.~\eqref{eq:bv-promise} alone.
+
+\section{Simon's algorithm}
+\label{sec:simon}
+
+\subsection{The hidden-period promise and the circuit}
+Let $f:\Sigma^n\to\Sigma^m$ satisfy
+\begin{equation}
+ \boxed{f(x)=f(x')\iff x'=x\text{ or }x'=x\oplus s}
+ \label{eq:simon-promise}
+\end{equation}
+for every $x,x'$, where $s\in\Sigma^n$ is unknown. The goal is to recover $s$, allowing $s=0^n$. When $s=0^n$, the function is injective. When $s\ne0^n$, each output has exactly two preimages, $x$ and $x\oplus s$. The output space must be large enough: the two cases require $m\ge n$ and $m\ge n-1$, respectively. A promise problem allowing both typically chooses $m\ge n$.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=stealth]
+\node at (-3,1.3) {$s=0^n$: injective};
+\node at (2,1.3) {$s\ne0^n$: paired};
+\node (a) at (-4,.5) {$x$}; \node (b) at (-2,.5) {$f(x)$};
+\node (a1) at (-4,-.5) {$x'$}; \node (b1) at (-2,-.5) {$f(x')$};
+\draw[->] (a)--(b); \draw[->] (a1)--(b1);
+\node (u) at (.5,.5) {$w$}; \node (v) at (.5,-.5) {$w\oplus s$};
+\node (z) at (3.8,0) {$z=f(w)=f(w\oplus s)$};
+\draw[->] (u)--(z); \draw[->] (v)--(z);
+\end{tikzpicture}
+\caption{The two admissible mapping structures. Distinct inputs have distinct outputs on the left; on the right, each pair differs by the same nonzero string $s$.}
+\end{figure}
+\par
+The work register is initialized to $\ket{0^m}$ so that function values label the input branches.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}
+ \lstick{$\ket{0^n}_x$} & \qwbundle{n} & \gate{H^{\otimes n}} & \gate[2]{U_f} & \gate{H^{\otimes n}} & \meter{} & \qwbundle{n}\setwiretype{c} & \rstick{$y$} \\
+ \lstick{$\ket{0^m}$} & \qwbundle{m} & \qw & & \qw & \qw & \qwbundle{m} & \qw
+\end{quantikz}
+\caption{Simon's sampling circuit. One oracle query is used per run, and only the input register is read. Independent repetitions supply linear constraints on $s$.}
+\label{fig:simon-circuit}
+\end{figure}
+\par
+Writing $N=2^n$, the first Hadamard layer and the query give
+\begin{align}
+ \ket{\psi_1}&=\frac1{\sqrt N}\sum_x\ket x\ket{0^m},\\
+ \ket{\psi_2}&=\frac1{\sqrt N}\sum_x\ket x\ket{f(x)}.
+ \label{eq:simon-post-oracle}
+\end{align}
+The second Hadamard layer produces
+\begin{align}
+ \ket{\psi_3}
+ &=\frac1N\sum_{x,y\in\Sigma^n}(-1)^{x\cdot y}\ket y\ket{f(x)}\notag\\
+ &=\sum_y\ket y\otimes\ket{v_y},\qquad
+ \ket{v_y}=\frac1N\sum_x(-1)^{x\cdot y}\ket{f(x)}.
+ \label{eq:simon-final-state}
+\end{align}
+
+\subsection{The measurement distribution}
+Since the work register is unobserved, the probability of $y$ is the squared norm of its work-register amplitude vector:
+\begin{equation}
+ P(y)=\|\ket{v_y}\|^2
+ =\frac1{N^2}\sum_{x,x'}(-1)^{(x\oplus x')\cdot y}\braket{f(x')}{f(x)}.
+ \label{eq:simon-prob-double}
+\end{equation}
+The inner product is $1$ for equal function values and $0$ otherwise. Define
+\begin{equation}
+ \operatorname{range}(f)=\{f(x):x\in\Sigma^n\},\qquad
+ f^{-1}(z)=\{x\in\Sigma^n:f(x)=z\}.
+\end{equation}
+Grouping equal values gives
+\begin{equation}
+ \ket{v_y}=\frac1N\sum_{z\in\operatorname{range}(f)}
+ \left(\sum_{x\in f^{-1}(z)}(-1)^{x\cdot y}\right)\ket z.
+\end{equation}
+Orthogonality of the distinct output labels then implies
+\begin{equation}
+ P(y)=\frac1{N^2}\sum_{z\in\operatorname{range}(f)}
+ \left|\sum_{x\in f^{-1}(z)}(-1)^{x\cdot y}\right|^2.
+ \label{eq:simon-fiber-prob}
+\end{equation}
+For $s=0^n$, every preimage set is a singleton and there are $N$ output values. Hence
+\begin{equation}
+ P(y)=\frac N{N^2}=\frac1N\qquad(y\in\Sigma^n).
+ \label{eq:simon-injective-prob}
+\end{equation}
+For $s\ne0^n$, each preimage set is $\{w,w\oplus s\}$ and contributes the phase sum
+\begin{align}
+ (-1)^{w\cdot y}+(-1)^{(w\oplus s)\cdot y}
+ &=(-1)^{w\cdot y}\left(1+(-1)^{s\cdot y}\right).
+\end{align}
+Its squared modulus is $4$ when $s\cdot y=0$ and $0$ when $s\cdot y=1$. There are $N/2$ output values, so
+\begin{equation}
+ \boxed{P(y)=\begin{cases}2/N=2^{-(n-1)},&s\cdot y=0,\\0,&s\cdot y=1.
+ \end{cases}}
+ \label{eq:simon-nonzero-prob}
+\end{equation}
+The allowed outcomes form the $(n-1)$-dimensional subspace
+\begin{equation}
+ s^\perp=\{y\in\Ftwo^n:s\cdot y=0\}.
+\end{equation}
+There are $N/2$ such strings, each with probability $2/N$, confirming normalization. The zero string is allowed but supplies no independent constraint.
+
+Measuring the work register after Eq.~\eqref{eq:simon-post-oracle} gives an equivalent account of the interference. In the two-to-one case, outcome $z$ has probability $2/N$ and leaves the input in
+\begin{equation}
+ \ket{\chi_z}=\frac{\ket w+\ket{w\oplus s}}{\sqrt2}.
+\end{equation}
+The next Hadamard layer gives
+\begin{equation}
+ H^{\otimes n}\ket{\chi_z}
+ =\frac1{\sqrt{2N}}\sum_y(-1)^{w\cdot y}\left(1+(-1)^{s\cdot y}\right)\ket y.
+\end{equation}
+The conditional probability of $y$ is again Eq.~\eqref{eq:simon-nonzero-prob}, independent of $z$. Discarding the work-register outcome, or omitting that measurement entirely, therefore leaves the same input-register distribution.
+
+For example, take $n=2$, $s=11$, and
+\begin{equation}
+ f(00)=f(11)=00,\qquad f(01)=f(10)=01.
+\end{equation}
+Then
+\begin{equation}
+ \ket{\psi_2}=\frac12\left[(\ket{00}+\ket{11})\ket{00}
+ +(\ket{01}+\ket{10})\ket{01}\right].
+\end{equation}
+The equation $11\cdot y=y_1\oplus y_0=0$ allows only $00$ and $11$, each with probability $1/2$. Outcome $00$ gives the identity $0=0$; outcome $11$ gives $s_1\oplus s_0=0$, whose unique nonzero solution is $11$.
+
+\subsection{Recovering the period by linear algebra}
+After $k$ independent runs, arrange the samples as rows of
+\begin{equation}
+ M=\begin{pmatrix}
+ y^{(1)}_{n-1}&\cdots&y^{(1)}_0\\
+ \vdots&&\vdots\\
+ y^{(k)}_{n-1}&\cdots&y^{(k)}_0
+ \end{pmatrix}\in\Ftwo^{k\times n}.
+\end{equation}
+Each row satisfies $y^{(i)}\cdot s=0$, giving
+\begin{equation}
+ Ms=0\pmod2,\qquad s\in\ker M.
+ \label{eq:simon-linear-system}
+\end{equation}
+Elimination and rank calculations are performed over $\Ftwo$: row addition is XOR and $1+1=0$. If $s\ne0^n$ and the rows span $s^\perp$, then $\rank M=n-1$ and $\ker M=\{0^n,s\}$. If $s=0^n$ and the rows span $\Ftwo^n$, then $\rank M=n$ and the kernel contains only zero. A larger kernel leaves multiple candidates and calls for further sampling.
+
+A fixed-budget procedure outputs zero at rank $n$, the unique nonzero kernel vector at rank $n-1$, and reports insufficient rank otherwise. An injective function can temporarily leave a nonzero candidate at rank $n-1$, so this procedure needs a rank-failure probability bound. Alternatively, two extra function-value queries verify a nonzero candidate $t$:
+\begin{equation}
+ f(0^n)=f(t)\iff t=s\qquad(t\ne0^n).
+\end{equation}
+If the candidate is the unique nonzero kernel vector and fails this test, the promise implies $s=0^n$: any nonzero period would belong to the same one-dimensional kernel and would therefore equal $t$. When the kernel has larger dimension, selecting one candidate arbitrarily does not ensure rapid recovery.
+
+\subsection{Sampling cost and classical query complexity}
+Suppose the samples are uniform and independent in a $d$-dimensional binary vector space $V$. Failure to span $V$ is equivalent to the existence of a nonzero linear functional $\ell:V\to\Ftwo$ vanishing on every sampled row. Such a functional vanishes on half of $V$, so the probability for a fixed $\ell$ is $2^{-k}$. There are $2^d-1$ nonzero functionals; the union bound yields
+\begin{equation}
+ P(\operatorname{span}\{y^{(i)}\}\ne V)
+ \le(2^d-1)2^{-k}<2^{d-k}.
+ \label{eq:simon-failure-union}
+\end{equation}
+Here $d=n$ for the injective case and $d=n-1$ for a nonzero period. Thus for $k=n+r$, with $r\ge0$ additional samples,
+\begin{equation}
+ P(\text{insufficient rank})<
+ \begin{cases}2^{-r},&s=0^n,\\2^{-r-1},&s\ne0^n.
+ \end{cases}
+\end{equation}
+The requirement is that some $d$ rows form a basis; all $k>d$ rows cannot be independent. The exact spanning probability is
+\begin{equation}
+ P(\rank M=d)=\prod_{j=0}^{d-1}(1-2^{j-k}),\qquad k\ge d.
+ \label{eq:simon-full-rank-prob}
+\end{equation}
+To count it, express each row in a basis of $V$, obtaining a uniform $k\times d$ binary matrix. After $j$ independent columns have been chosen, their span contains $2^j$ of the $2^k$ possible columns. The next column avoids that span with probability $1-2^{j-k}$, and multiplying these conditional probabilities gives the formula.
+
+For $0<\varepsilon<1$, choosing $r=\lceil\log_2(1/\varepsilon)\rceil$ gives
+\begin{equation}
+ k=O\!\left(n+\log\frac1\varepsilon\right)
+\end{equation}
+queries and failure probability at most $\varepsilon$. Each run uses $2n$ Hadamard gates. At fixed success probability, the known quantum gates total $O(n^2)$, and direct binary elimination takes $O(kn^2)=O(n^3)$ bit operations. Oracle implementation costs remain separate.
+
+Classical queries reveal a nonzero period immediately if two distinct inputs collide:
+\begin{equation}
+ f(x^{(i)})=f(x^{(j)})\Longrightarrow s=x^{(i)}\oplus x^{(j)},\qquad i\ne j.
+\end{equation}
+Without a collision, the pairwise differences exclude at most $\binom q2$ possible nonzero periods after $q$ distinct queries. For a hard input distribution, choose $s$ uniformly among the $N-1$ nonzero strings and assign distinct random output labels to its pairs. Conditional on a collision-free transcript, $s$ remains uniform among the unexcluded candidates: distinct random labels have no further dependence on the period. This property holds for adaptive queries as well as predetermined ones.
+
+After $j$ distinct queries, a new argument tests at most $j$ new differences. For $B=\binom q2<N-1$, the conditional probability of a first collision at that step is at most $j/(N-1-B)$. Summing over $j=0,\ldots,q-1$ bounds the collision probability by $B/(N-1-B)$. Without a collision, guessing the period succeeds with probability at most $1/(N-1-B)$. Thus, for $q^2\ll N$,
+\begin{equation}
+ P(\text{classical recovery})\le\frac{B+1}{N-1-B}
+ =O\!\left(\frac{q^2+1}{N}\right).
+ \label{eq:simon-classical-success}
+\end{equation}
+Averaging over internal randomness preserves this distributional bound. A constant success guarantee therefore requires $\Omega(\sqrt N)=\Omega(2^{n/2})$ classical queries. Random querying attains the same birthday-paradox scale~\cite{Simon1997}.
+
+\chapter{Computational Complexity and Reversible Computation}
+\label{chap:cost}
+
+An oracle query describes access to a function without specifying how that access is implemented. A complete algorithmic cost model must also account for the input encoding, the elementary gates used to evaluate the function, the workspace, and the removal of intermediate information. Binary arithmetic provides concrete examples of these costs and supplies the operations needed later for modular order finding.
+
+\section{Arithmetic problems and input length}
+Integer factorization takes an integer $N\ge2$ and asks for its decomposition
+\begin{equation}
+ N=\prod_{j=1}^{r}p_j^{e_j},\qquad
+ p_j\text{ distinct primes},\quad e_j\ge1.
+\end{equation}
+The fundamental theorem of arithmetic makes this decomposition unique up to the order of the primes. For example, $12=2^2\cdot3$. Uniqueness alone supplies no efficient procedure for finding the factors.
+
+The greatest common divisor is accessible through the identity
+\begin{equation}
+ \gcd(A,B)=\gcd(B,A\bmod B),\qquad B>0.
+ \label{eq:euclid}
+\end{equation}
+To prove it, write $A=qB+r$. A common divisor of $A,B$ divides $r=A-qB$; a common divisor of $B,r$ divides $A=qB+r$. The sets of common divisors coincide, giving Eq.~\eqref{eq:euclid}. Repeatedly replacing $(A,B)$ by $(B,r)$ reduces the second entry until it is zero, at which point the first entry is returned. For nonnegative integers, $\gcd(A,0)=A$; the computational convention $\gcd(0,0)=0$ does not arise from a largest-positive-divisor definition. For example,
+\begin{align}
+ 252&=2\cdot105+42,&105&=2\cdot42+21,&42&=2\cdot21,
+\end{align}
+so $\gcd(252,105)=21$. Comparing the complexity of arithmetic tasks requires measuring their size by the encoded input length.
+
+The binary length of a nonnegative integer, with no leading zeros, is
+\begin{equation}
+ \ell(N)=\begin{cases}1,&N=0,\\\lfloor\log_2N\rfloor+1,&N\ge1.
+ \end{cases}
+ \label{eq:bitlength}
+\end{equation}
+An $n$-bit positive integer lies in $2^{n-1}\le N<2^n$, and $\ell(N)=\Theta(\log N)$ as $N\to\infty$. A running time linear in $N$ can therefore be exponential in $n$. For structured inputs such as vectors, matrices, and graphs, both the number of encoded entries and the precision of each entry contribute to the input length. Shor's factorization algorithm is polynomial in this binary input length~\cite{Shor1997}; the order-finding component will be developed in the chapter on phase estimation.
+
+\section{Circuit cost models and asymptotic growth}
+Once an elementary gate library has been fixed, the \emph{size} $S(C)$ of a circuit is its total gate count. Its \emph{depth} $D(C)$ is the number of gates on a longest dependency path, and its \emph{width} is the number of simultaneously occupied bits or qubits. Size measures sequential work. Depth measures ideal parallel time when gates on disjoint wires can be executed simultaneously at equal cost. A box labeled by a large matrix $U$ specifies an operator without determining its elementary implementation cost.
+
+Classical gates can be chosen from AND, OR, NOT, and FANOUT. A quantum gate library can include $X,Y,Z,H,S,S^\dagger,T,T^\dagger$, CNOT, and single-qubit measurements. For example,
+\begin{equation}
+ H=\frac1{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix},\quad
+ S=\begin{pmatrix}1&0\\0&\ii\end{pmatrix},\quad
+ T=\begin{pmatrix}1&0\\0&e^{\ii\pi/4}\end{pmatrix}.
+\end{equation}
+A fixed finite gate library and a model counting any single-qubit unitary as one gate have different precision costs. The Clifford+$T$ library is approximately universal, but continuously variable rotations generally require a synthesis accuracy and a corresponding gate count. The quadratic QFT gate count used later treats controlled phase rotations of arbitrary specified angles as elementary operations~\cite{NC2010}.
+
+An algorithm accepting arbitrary input lengths is represented by a circuit family $\{C_n\}_{n\ge1}$. Its worst-case cost can be written
+\begin{equation}
+ t(n)=\max_{|x|=n}\operatorname{cost}(C_n,x).
+\end{equation}
+For a fixed ordinary circuit on $n$ inputs, the gate count is $S(C_n)$ regardless of the input values. Algorithms with adaptive measurements can instead require worst-case or expected cost. A claim of a uniform polynomial-time algorithm also requires an efficient procedure for generating $C_n$, typically a classical procedure running in time polynomial in $n$. Existence of a small circuit separately for each length does not by itself meet this requirement.
+
+For eventually nonnegative functions $g,h$, asymptotic upper bounds are defined by
+\begin{equation}
+ g(n)=O(h(n))\iff
+ \exists c>0,\exists n_0,\ \forall n\ge n_0:\ g(n)\le ch(n).
+\end{equation}
+The notation $\Theta(h(n))$ requires a matching lower bound. A polynomial bound has the form $O(n^b)$ for a fixed exponent $b$. Typical subexponential scales include $2^{n^\delta}$ with $0<\delta<1$, while the broader asymptotic condition is $2^{o(n)}$. A growth scale is called superpolynomial here when it grows faster than $n^b$ for every fixed $b$, that is, when it is $n^{\omega(1)}$. For instance,
+\begin{equation}
+ n^{\log_2n}=2^{(\log_2n)^2}
+\end{equation}
+is both superpolynomial and subexponential. Polynomial and exponential growth do not exhaust the possible asymptotic behaviors.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=.85cm,y=.62cm]
+\draw[->](0,0)--(7,0) node[right]{Input length};
+\draw[->](0,0)--(0,6) node[above]{Cost};
+\draw[dashed](0,4.5)--(6.5,4.5) node[right]{Budget};
+\draw[domain=0:5.145,smooth,variable=\x] plot ({\x},{.17*\x*\x});
+\draw[domain=0:3.58,smooth,variable=\x] plot ({\x},{.4*(exp(.7*\x)-1)});
+\node[anchor=west] at (5.5,3.4){Polynomial}; \node at (3.2,5.3){Exponential};
+\draw[dashed](3.58,0)--(3.58,4.5); \draw[dashed](5.145,0)--(5.145,4.5);
+\node[below] at (3.58,0){$C_e$}; \node[below] at (5.145,0){$C_p$};
+\end{tikzpicture}
+\caption{An illustrative comparison of growth rates under a fixed resource budget. The curves are schematic; $C_e<C_p$ describes this illustration, with no claim about measured hardware performance or all finite input sizes.}
+\end{figure}
+\par
+
+\section{Binary arithmetic and its cost}
+
+\subsection{Half adders, full adders, and carry propagation}
+Adding two bits $a,b$ gives a sum bit $s$ and a carry bit $c$ satisfying
+\begin{equation}
+ a+b=s+2c,\qquad s=a\oplus b,\quad c=ab.
+\end{equation}
+This is a \emph{half adder} (HA). For inputs $00,01,10,11$, the output pairs $(s,c)$ are $00,10,10,01$, respectively. In particular, $a=0,b=1$ gives $s=1,c=0$, representing the integer $1$.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,box/.style={draw,minimum width=1.1cm,minimum height=.6cm}]
+\node (a) at (0,1.2) {$a$}; \node (b) at (0,0) {$b$};
+\node[box] (xor) at (3,1.2) {XOR}; \node[box] (and) at (3,0) {AND};
+\draw (a.east)--(xor.west); \draw (b.east)--(and.west);
+\fill (.8,1.2) circle (1.5pt); \fill (1.6,0) circle (1.5pt);
+\draw (.8,1.2)--(.8,.2)--(2.45,.2); \draw (1.6,0)--(1.6,1)--(2.45,1);
+\draw (xor.east)--(4,1.2) node[right]{$s=a\oplus b$};
+\draw (and.east)--(4,0) node[right]{$c=ab$};
+\end{tikzpicture}
+\caption{A classical half adder. Filled branch points denote classical FANOUT; they do not denote cloning of arbitrary quantum states.}
+\label{fig:halfadder}
+\end{figure}
+\par
+If XOR is not elementary, it can be decomposed using
+\begin{equation}
+ a\oplus b=(a\land\neg b)\lor(\neg a\land b).
+\end{equation}
+Counting every NOT, AND, OR, and two-output FANOUT as one gate, this XOR implementation uses two NOT gates, two AND gates, one OR gate, and two FANOUT gates: seven gates in total. Preserving additional branches for $ab$ uses two more FANOUT gates and one AND gate, giving a ten-gate half adder. The constant changes if branching is free or XOR is elementary.
+
+A \emph{full adder} (FA) also receives an incoming carry $c_{\rm in}$. One half adder computes
+\begin{equation}
+ u=a\oplus b,\qquad v=ab;
+\end{equation}
+a second adds $u$ and $c_{\rm in}$, giving
+\begin{equation}
+ s=u\oplus c_{\rm in},\qquad w=uc_{\rm in},\qquad c_{\rm out}=v\lor w.
+\end{equation}
+If $v=1$, then $a=b=1$, so $u=0$ and $w=0$. Thus $v$ and $w$ cannot both equal $1$, and their OR can also be written $v\oplus w$. The resulting integer identity is
+\begin{equation}
+ a+b+c_{\rm in}=s+2c_{\rm out}.
+\end{equation}
+\par
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=.8cm,box/.style={draw,minimum width=1cm,minimum height=.8cm}]
+\node[box] (h1) at (2,0) {HA}; \node[box] (h2) at (4,1) {HA}; \node[box] (or) at (6,-.3) {OR};
+\draw (0,.25) node[left]{$a$}--(1.5,.25);
+\draw (0,-.25) node[left]{$b$}--(1.5,-.25);
+\draw (0,1.25) node[left]{$c_{\rm in}$}--(3.5,1.25);
+\draw (2.5,.25)--(3,.25)--(3,.75)--(3.5,.75) node[midway,above]{$u$};
+\draw (2.5,-.25)--(5.5,-.25) node[midway,below]{$v$};
+\draw (4.5,.75)--(5,.75)--(5,-.55)--(5.5,-.55);
+\node[above] at (4.75,.75) {$w$};
+\draw (4.5,1.25)--(7,1.25) node[right]{$s$};
+\draw (6.5,-.3)--(7,-.3) node[right]{$c_{\rm out}$};
+\end{tikzpicture}
+\caption{A full adder assembled from two half adders and an OR gate. Under the stated library convention, its size is $10+10+1=21$ gates.}
+\label{fig:fulladder}
+\end{figure}
+\par
+Zero-extend two integers to a common length $L=\max\{n,m\}$. A half adder handles the least significant bits, and full adders propagate the carry through the remaining positions:
+\begin{align}
+ s_0&=a_0\oplus b_0,&c_1&=a_0b_0,\\
+ s_j&=a_j\oplus b_j\oplus c_j,&
+ c_{j+1}&=a_jb_j\lor[(a_j\oplus b_j)c_j],\quad1\le j<L.
+\end{align}
+The output is $c_Ls_{L-1}\cdots s_0$, including the final carry. Its size in this implementation is
+\begin{equation}
+ S_{\rm add}(L)=10+21(L-1)=O(L).
+\end{equation}
+\par
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,box/.style={draw,minimum width=1cm,minimum height=.7cm}]
+\foreach \j/\name/\lab in {0/HA/0,1/FA/1,2/FA/2}{
+\node[box] (g\j) at (2.5*\j,0) {\name};
+\draw (2.5*\j-.22,1)--(2.5*\j-.22,.35) node[pos=0,above]{$a_{\lab}$};
+\draw (2.5*\j+.22,1)--(2.5*\j+.22,.35) node[pos=0,above]{$b_{\lab}$};
+\draw (2.5*\j,-.35)--(2.5*\j,-1) node[below]{$s_{\lab}$};}
+\draw[->] (g0.east)--(g1.west) node[midway,above]{$c_1$};
+\draw[->] (g1.east)--(g2.west) node[midway,above]{$c_2$};
+\draw[->] (g2.east)--(7,0) node[right]{$\cdots$};
+\end{tikzpicture}
+\caption{Ripple-carry addition. Further full adders follow the indicated pattern, and the last carry is retained as the most significant output bit.}
+\end{figure}
+\par
+The carry dependency also makes the depth $O(L)$. Other adder architectures can reduce depth while changing the size or workspace requirements.
+
+\subsection{Multiplication, division, and the Euclidean algorithm}
+Writing $B=\sum_{j=0}^{m-1}b_j2^j$ gives
+\begin{equation}
+ AB=\sum_{j=0}^{m-1}b_j(A\ll j),
+\end{equation}
+where $A\ll j$ denotes a left shift by $j$ binary positions. Schoolbook multiplication forms shifted partial products and adds them column by column. Its bit-operation cost for $n$- and $m$-bit operands is $O(nm)$, or $O(n^2)$ when both lengths are at most $n$. This is an implementation upper bound. Faster methods exist; the historical Sch\"onhage--Strassen bound is $O(n\log n\log\log n)$~\cite{SS1971}. The arithmetic estimates below use schoolbook methods so that the gate-cost assumptions remain explicit.
+
+Long division of $A\ge0$ by $B>0$ returns the unique pair $(q,r)$ with
+\begin{equation}
+ A=qB+r,\qquad0\le r<B.
+\end{equation}
+At each input bit, shift the current remainder left and append that bit, compare with $B$, and subtract $B$ if necessary to determine the next quotient bit. There are at most $n$ steps on $n$-bit operands, each requiring $O(n)$ bit operations, giving $O(n^2)$.
+
+The Euclidean algorithm also admits an $O(n^2)$ schoolbook bound, despite performing several divisions. Arrange the initial operands so that $A\ge B>0$ and let consecutive nonzero remainders have bit lengths $\ell_i,\ell_{i+1}$. A division can be bounded by
+\begin{equation}
+ O\!\left(\ell_{i+1}(\ell_i-\ell_{i+1}+1)\right).
+\end{equation}
+Only $\ell_i-\ell_{i+1}+1$ quotient positions need be processed, and each comparison or subtraction has length $O(\ell_{i+1})$. The total decrease $\sum_i(\ell_i-\ell_{i+1})$ is at most $n$. There are also $O(n)$ divisions: if a remainder exceeds half of the previous divisor, the next quotient is $1$ and the next remainder is below that half, so the numerical scale falls by at least a factor of two every two steps. With $\ell_{i+1}\le n$, summing the length-decrease and constant terms separately gives $O(n^2)$. Multiplying a uniform $O(n^2)$ division bound by the number of divisions would lose this decrease in operand size.
+
+\subsection{Modular exponentiation}
+Given a modulus $M\ge2$, a reduced base $0\le A<M$, and an exponent with $L$ binary positions,
+\begin{equation}
+ k=\sum_{j=0}^{L-1}k_j2^j,\qquad
+ A^k\equiv\prod_{j=0}^{L-1}(A^{2^j})^{k_j}\pmod M.
+\end{equation}
+Repeated squaring maintains $b_j=A^{2^j}\bmod M$ and an accumulated product $r_j$. Initialize $b_0=A$ and $r_0=1$. At position $j$, multiply $r_j$ by $b_j$ modulo $M$ if $k_j=1$, and then square $b_j$ modulo $M$. The loop invariant is
+\begin{equation}
+ r_{j+1}\equiv A^{\sum_{h=0}^{j}k_h2^h}\pmod M.
+\end{equation}
+It holds initially for an empty product; each multiplication introduces precisely the next selected power. After $L$ positions, the exponent includes every bit of $k$.
+
+The algorithm uses $O(L)$ modular multiplications. For an $n$-bit modulus, schoolbook multiplication followed by reduction costs $O(n^2)$ per step, so the total is $O(Ln^2)$. The bound $O(n^3)$ additionally assumes $L=O(n)$. An unreduced base must first be reduced modulo $M$, with a cost determined by its own input length. The case $M=1$ returns zero directly, and $k=0$ returns $1\bmod M$. For example, $13=(1101)_2$ and repeated squaring modulo $7$ gives $3,2,4,2$; hence
+\begin{equation}
+ 3^{13}\equiv3\cdot4\cdot2\equiv3\pmod7.
+\end{equation}
+The four binary positions determine the number of rounds, rather than the numerical exponent $13$.
+
+\subsection{Factorization scales}
+Every composite $N$ has a nontrivial factor no greater than $\sqrt N$. Trial division therefore tests $O(\sqrt N)=O(2^{n/2})$ candidate divisors on an $n$-bit input. With a schoolbook division cost of $O(n^2)$, an upper bound for this method is
+\begin{equation}
+ O(n^2 2^{n/2}).
+\end{equation}
+This bound concerns trial division and establishes no lower bound for integer factorization as a problem.
+
+The conventional heuristic analysis of the general number field sieve has a growth scale of the form~\cite{Pomerance1996}
+\begin{equation}
+ \exp\!\left((c+o(1))(\log N)^{1/3}(\log\log N)^{2/3}\right),
+ \qquad c>0,
+\end{equation}
+which becomes $\exp(\Theta(n^{1/3}(\log n)^{2/3}))$ at the level of this heuristic estimate. Its exponent grows faster than $\log n$ and slower than $n$, placing the predicted scale between polynomial and fully exponential growth. An upper-bound notation such as $\exp(O(n^{1/3}(\log n)^{2/3}))$ alone would not prove superpolynomial growth. The heuristic estimate is also distinct from a proved worst-case guarantee for every input. Shor's polynomial-time quantum algorithm concerns factorization and does not establish polynomial-time quantum solutions to all NP-complete problems.
+
+\section{Reversible Boolean computation}
+Closed-system quantum dynamics is unitary and therefore reversible. A Boolean operation such as AND becomes compatible with this requirement by retaining its inputs and XORing its answer into a target. The Toffoli gate implements
+\begin{equation}
+ \ket a\ket b\ket c\longmapsto\ket a\ket b\ket{c\oplus ab}.
+ \label{eq:toffoli}
+\end{equation}
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[row sep=.5cm,column sep=.7cm]
+ \lstick{$\ket a$}&\ctrl{2}&\rstick{$\ket a$}\qw\\
+ \lstick{$\ket b$}&\ctrl{1}&\rstick{$\ket b$}\qw\\
+ \lstick{$\ket c$}&\targ{}&\rstick{$\ket{c\oplus ab}$}\qw
+\end{quantikz}
+\caption{The Toffoli gate (CCNOT). The target is flipped exactly when both controls equal $1$. A zero target receives the AND value $ab$.}
+\end{figure}
+\par
+NOT is already reversible: $X\ket a=\ket{a\oplus1}$. De Morgan's identity,
+\begin{equation}
+ a\lor b=\neg(\neg a\land\neg b),
+\end{equation}
+provides an OR construction: invert both inputs, compute their AND into a zero target, invert that target, and restore the inputs.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[row sep=.5cm,column sep=.55cm]
+ \lstick{$\ket a$}&\gate{X}&\ctrl{2}&\gate{X}&\qw&\rstick{$\ket a$}\qw\\
+ \lstick{$\ket b$}&\gate{X}&\ctrl{1}&\gate{X}&\qw&\rstick{$\ket b$}\qw\\
+ \lstick{$\ket0$}&\qw&\targ{}&\qw&\gate{X}&\rstick{$\ket{a\lor b}$}\qw
+\end{quantikz}
+\caption{A reversible OR embedding. The input bits are restored. More generally, an initial target $c$ becomes $c\oplus(a\lor b)$.}
+\end{figure}
+\par
+To check the general target, its final value is
+\begin{equation}
+ c\oplus[(1\oplus a)(1\oplus b)]\oplus1
+ =c\oplus(a\lor b).
+\end{equation}
+Classical FANOUT can be implemented on computational-basis labels by CNOT:
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[row sep=.5cm,column sep=.7cm]
+ \lstick{$\ket a$}&\ctrl{1}&\rstick{$\ket a$}\qw\\
+ \lstick{$\ket0$}&\targ{}&\rstick{$\ket a$}\qw
+\end{quantikz}
+\caption{CNOT copies a computational-basis bit to a zero target. Its linear extension entangles a general superposition instead of cloning it.}
+\end{figure}
+\par
+Indeed, for $\ket\phi=\alpha\ket0+\beta\ket1$, the output is $\alpha\ket{00}+\beta\ket{11}$. The tensor square $\ket\phi\ket\phi$ also contains $\alpha\beta\ket{01}$ and $\alpha\beta\ket{10}$ and is generally different. Reversible simulation reproduces the classical truth table on basis states, with its action on superpositions fixed by linearity.
+
+\subsection{Workspace and branch information}
+Embedding a classical Boolean circuit gate by gate preserves its input and intermediate values. If the original circuit has size $t$, a direct construction with fixed fan-in uses $O(t)$ NOT, CNOT, and Toffoli gates and $O(t)$ workspace bits, subject to the fanout convention. Write its action as
+\begin{equation}
+ R\ket x_X\ket{0^k}_W
+ =\ket x_X\ket{f(x)}_F\ket{g(x)}_G.
+ \label{eq:reversible-raw}
+\end{equation}
+The $k$-bit workspace $W$ contains an $m$-bit function register $F$ and a $(k-m)$-bit garbage register $G$. The input remains in $X$, so the total register dimension is unchanged.
+
+For a superposition, the state becomes
+\begin{equation}
+ \sum_x\alpha_x\ket x\ket{f(x)}\ket{g(x)}.
+\end{equation}
+If subsequent computation accesses only $X,F$, its state is described by the partial trace
+\begin{equation}
+ \rho_{XF}=\sum_{x,x'}\alpha_x\alpha_{x'}^*
+ \braket{g(x')}{g(x)}\,
+ \ket{x,f(x)}\bra{x',f(x')}.
+\end{equation}
+Different orthogonal garbage labels make the corresponding inner product vanish and remove that off-diagonal term from the reduced state. The full state remains coherent, but the inaccessible branch information suppresses the interference available to operations restricted to $X,F$.
+
+\section{Uncomputation and clean function evaluation}
+Introduce a target register $Y$ with an arbitrary initial basis string $y$. Compute with $R$, XOR the function value from $F$ into $Y$, and reverse the computation:
+\begin{align}
+ \ket x\ket{0^k}\ket y
+ &\xrightarrow{R}\ket x\ket{f(x)}\ket{g(x)}\ket y\\
+ &\xrightarrow{\mathrm{COPY}}\ket x\ket{f(x)}\ket{g(x)}\ket{y\oplus f(x)}\\
+ &\xrightarrow{R^\dagger}\ket x\ket{0^k}\ket{y\oplus f(x)}.
+ \label{eq:uncompute}
+\end{align}
+The COPY operation consists of $m$ CNOT gates from $F_j$ to $Y_j$. It leaves $X,F,G$ unchanged on each basis branch, so $R^\dagger$ can undo the stored computation. By linearity, the same reversal works for superposed inputs and arbitrary states of $Y$, restoring the workspace to a factorized $\ket{0^k}$.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[row sep=.6cm,column sep=.5cm]
+ \lstick{$X:\ket x$}&\gate[3]{R}&\qw&\gate[3]{R^\dagger}&\rstick{$\ket x$}\qw\\
+ \lstick{$F:\ket{0^m}$}&\qw&\gate[3]{\mathrm{COPY}}&\qw&\rstick{$\ket{0^m}$}\qw\\
+ \lstick{$G:\ket{0^{k-m}}$}&\qw&\qw&\qw&\rstick{$\ket{0^{k-m}}$}\qw\\
+ \lstick{$Y:\ket y$}&\qw&\qw&\qw&\rstick{$\ket{y\oplus f(x)}$}\qw
+\end{quantikz}
+\caption{Compute--copy--uncompute at register level. The COPY block is $\mathrm{CNOT}^{\otimes m}$ from $F$ to $Y$, acting as the identity on $G$. The blocks $R$ and $R^\dagger$ act on $X,F,G$.}
+\label{fig:uncompute}
+\end{figure}
+\par
+After the factorized workspace is omitted, the remaining action is the XOR oracle of Eq.~\eqref{eq:xor-oracle},
+\begin{equation}
+ U_f\ket x\ket y=\ket x\ket{y\oplus f(x)}.
+\end{equation}
+Saving the answer while reversing the intermediate history is called \emph{uncomputation}; Bennett's reversible-computation construction is a classical source of this method~\cite{Bennett1973}.
+
+If the reversible implementation has size $S(R)$, the clean evaluation satisfies
+\begin{equation}
+ S(U_f)\le2S(R)+m=O(t+m).
+\end{equation}
+For $m=O(t)$, this is $O(t)$. If a classical convention supplies arbitrarily many output copies for free, the output length $m$ must still be counted in the CNOT transfer. This construction is an upper bound derived from a given classical implementation. It provides no universal lower bound comparing optimal quantum and classical circuits across different gate libraries. An oracle supplied as an external primitive may count as one query; an oracle synthesized from an explicit algorithm also incurs its reversible gate and workspace costs.
+
+\chapter{Quantum Fourier Transform and Phase Estimation}
+\label{ch:phase}
+
+\section{Eigenphases as computational information}
+
+Reversible computation encodes a classical function in a unitary circuit. A different question is how to extract information about the spectrum of a unitary operator. Let the system register $S$ contain $n$ qubits, so that its Hilbert space has dimension $D=2^n$. Since a unitary matrix is normal, it admits an orthonormal eigenbasis and the spectral decomposition
+\begin{equation}
+ U=\sum_{j=0}^{D-1}\lambda_j\ketbra{\psi_j}{\psi_j},
+ \qquad U\ket{\psi_j}=\lambda_j\ket{\psi_j}.
+ \label{eq:phase:spectral}
+\end{equation}
+Unitary evolution preserves the norm. For a normalized eigenvector,
+\begin{equation}
+ 1=\|U\ket{\psi_j}\|^2=|\lambda_j|^2\|\ket{\psi_j}\|^2=|\lambda_j|^2.
+\end{equation}
+Consequently every eigenvalue lies on the unit circle and can be written as $\lambda_j=e^{2\pi\ii\theta_j}$, with $\theta_j\in[0,1)$. The phase is defined modulo one: adding an integer to $\theta_j$ leaves the eigenvalue unchanged. The half-open interval selects a representative of this equivalence class.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.15,>=Stealth]
+ \draw[->] (-1.5,0)--(1.55,0) node[right] {$\operatorname{Re}$};
+ \draw[->] (0,-1.35)--(0,1.45) node[above] {$\operatorname{Im}$};
+ \draw (0,0) circle (1);
+ \node[below right] at (1,0) {$1$}; \node[below left] at (-1,0) {$-1$};
+ \node[right] at (0,1) {$\ii$}; \node[right] at (0,-1) {$-\ii$};
+ \draw[dashed,blue!65!black] (0,0)--({cos(120)},{sin(120)})
+ node[above left] {$e^{2\pi\ii\theta}$};
+ \draw[->,blue!65!black,thick] (0.45,0) arc[start angle=0,end angle=120,radius=0.45];
+ \node[blue!65!black] at (0.38,0.5) {$2\pi\theta$};
+\end{tikzpicture}
+\caption{An eigenvalue on the unit circle. The dimensionless phase $\theta$ is the argument divided by $2\pi$. The ray illustrates the convention; its angle is not an algorithmic measurement result.}
+\label{fig:phase:unitcircle}
+\end{figure}
+\par
+
+The phase-estimation problem assumes access to a unitary $U$, to the controlled operations required by the algorithm, and to a normalized eigenstate satisfying
+\begin{equation}
+ U\ket{\psi}=e^{2\pi\ii\theta}\ket{\psi}
+ \label{eq:phase:eigenpromise}
+\end{equation}
+Using an $m$-qubit estimation register, the algorithm produces an integer $Y$ and interprets $Y/2^m$ as an estimate of $\theta$. An exactly representable $m$-bit phase can be recovered with certainty. For a general phase, both the approximation error and the probability of obtaining that approximation must be specified.
+
+Controlled access is part of the input model. An arbitrary unknown unitary black box does not automatically provide a controlled version at no additional cost. The algorithm applies $U$ coherently and measures an auxiliary register after interference; it does not measure the operator $U$ directly.
+
+Throughout this chapter, the estimation register precedes the system register in tensor products: $\ket{x}_A\otimes\ket{\psi}_S$. Wires run from the most significant bit at the top to the least significant bit at the bottom,
+\begin{equation}
+ x=x_{m-1}x_{m-2}\cdots x_0\quad\hbox{(binary)},\qquad
+ x=\sum_{k=0}^{m-1}2^k x_k.
+ \label{eq:phase:bitorder}
+\end{equation}
+Thus $x_{m-1}$ controls $U^{2^{m-1}}$, whereas $x_0$ controls $U$. The same convention determines the swap gates in the Fourier circuit and the interpretation of the final classical bit string.
+
+\section{Phase kickback and Fourier states}
+
+\subsection{A single control qubit}
+
+A control qubit $a$ acts on the system through
+\begin{equation}
+ C(U)=\ketbra{0}{0}_a\otimes I_S+\ketbra{1}{1}_a\otimes U_S.
+ \label{eq:phase:controlledU}
+\end{equation}
+The system register can be represented by a bundled wire, as in Figure~\ref{fig:phase:controlledU}.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[column sep=0.7cm]
+ \lstick{$a$} & \ctrl{1} & \qw \\
+ \lstick{$S$} & \gate{U}\qwbundle{n} & \qw
+\end{quantikz}
+\caption{Controlled $U$. A filled dot activates the operation on control value $1$; the bundled target contains $n$ system qubits.}
+\label{fig:phase:controlledU}
+\end{figure}
+\par
+
+Prepare the control in $\ket0$, apply a Hadamard, use controlled $U$, and apply a second Hadamard before measurement.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[column sep=0.55cm]
+ \lstick{$\ket{0}_a$} & \gate{H} & \ctrl{1} & \gate{H} & \meter{} & \setwiretype{c} \\
+ \lstick{$\ket{\psi}_S$} & \qw & \gate{U}\qwbundle{n} & \qw & \qw & \qw
+\end{quantikz}
+\caption{A single-qubit phase-kickback experiment. The two Hadamard gates convert a relative phase into computational-basis measurement probabilities; the system eigenstate is not measured.}
+\label{fig:phase:kickback}
+\end{figure}
+\par
+
+Denote the successive states by $\ket{\Pi_0},\ldots,\ket{\Pi_3}$. Using $H\ket0=(\ket0+\ket1)/\sqrt2$ and $H\ket1=(\ket0-\ket1)/\sqrt2$ gives
+\begin{align}
+ \ket{\Pi_0}&=\ket{0}\ket{\psi},\\
+ \ket{\Pi_1}&=\frac{\ket{0}+\ket{1}}{\sqrt2}\otimes\ket{\psi},\\
+ \ket{\Pi_2}&=\frac{\ket{0}\ket{\psi}+\ket{1}U\ket{\psi}}{\sqrt2}
+ =\frac{\ket{0}+e^{2\pi\ii\theta}\ket{1}}{\sqrt2}\otimes\ket{\psi},\\
+ \ket{\Pi_3}&=
+ \left(\frac{1+e^{2\pi\ii\theta}}{2}\ket{0}
+ +\frac{1-e^{2\pi\ii\theta}}{2}\ket{1}\right)\otimes\ket{\psi}.
+ \label{eq:phase:onebitstate}
+\end{align}
+The eigenstate factors out after the controlled operation. What was an eigenvalue on the system becomes a relative phase between the two control branches. Each final amplitude has denominator $2$, accounting for both Hadamard normalizations.
+
+Taking absolute squares yields
+\begin{align}
+ \Pr(0)&=\left|\frac{1+e^{2\pi\ii\theta}}{2}\right|^2
+ =\frac{2+2\cos(2\pi\theta)}4=\cos^2(\pi\theta),\\
+ \Pr(1)&=\left|\frac{1-e^{2\pi\ii\theta}}{2}\right|^2
+ =\frac{2-2\cos(2\pi\theta)}4=\sin^2(\pi\theta).
+ \label{eq:phase:onebitprob}
+\end{align}
+At $\theta=0$ the outcome is certainly $0$; at $\theta=1/2$ it is certainly $1$. For a general phase, one run gives only a random bit. Even sufficiently many repetitions to estimate these probabilities cannot distinguish $\theta$ from $1-\theta$, because both phases give the same distribution.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=6cm,y=2.2cm,>=Stealth]
+ \draw[->] (0,0)--(1.1,0) node[right] {$\theta$};
+ \draw[->] (0,0)--(0,1.2) node[above] {$p$};
+ \draw[blue!65!black,thick,domain=0:1,samples=101] plot (\x,{cos(180*\x)^2});
+ \draw[red!70!black,thick,domain=0:1,samples=101] plot (\x,{sin(180*\x)^2});
+ \node[below] at (0,0) {$0$}; \node[below] at (0.5,0) {$\tfrac12$};
+ \node[below] at (1,0) {$1$}; \node[left] at (0,1) {$1$};
+ \node[blue!65!black,anchor=west] at (1.08,0.95) {$p_0=\cos^2(\pi\theta)$};
+ \node[red!70!black,anchor=west] at (1.08,0.65) {$p_1=\sin^2(\pi\theta)$};
+\end{tikzpicture}
+\caption{The exact single-control measurement probabilities, $\cos^2(\pi\theta)$ and $\sin^2(\pi\theta)$. The curves are analytic expressions, not sampled data, and are invariant under $\theta\mapsto1-\theta$.}
+\label{fig:phase:onebitplot}
+\end{figure}
+\par
+
+If controlled $U$ is repeated $r$ times, the orthogonal control projectors eliminate cross terms in the product:
+\begin{equation}
+ C(U)^r=\ketbra{0}{0}\otimes I+\ketbra{1}{1}\otimes U^r=C(U^r).
+\end{equation}
+Here $r$ denotes a repetition count, not the multiplicative order introduced later. The eigenphase is multiplied by $r$, so the measurement probabilities become
+\begin{equation}
+ \Pr_r(0)=\cos^2(\pi r\theta),\qquad \Pr_r(1)=\sin^2(\pi r\theta).
+\end{equation}
+Larger powers resolve finer phase differences but also introduce more periodic ambiguities. Multiple control qubits will encode these related phases coherently and allow a Fourier transform to decode them together.
+
+\subsection{Two controls and a four-dimensional Fourier basis}
+
+Let the two control bits be $x_1,x_0$, with $x_1$ the more significant bit. Apply one controlled $U$ from $x_0$ and two controlled $U$ operations from $x_1$.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[column sep=0.5cm]
+ \lstick{$\ket{0}_{x_1}$} & \gate{H} & \qw & \ctrl{2} & \ctrl{2} & \qw \\
+ \lstick{$\ket{0}_{x_0}$} & \gate{H} & \ctrl{1} & \qw & \qw & \qw \\
+ \lstick{$\ket{\psi}_S$} & \qw & \gate{U}\qwbundle{n} & \gate{U} & \gate{U} & \qw
+\end{quantikz}
+\caption{Preparing a two-control phase state. The lower control contributes one application of $U$, and the upper control contributes two, equivalent to controlled $U^2$.}
+\label{fig:phase:twoqubit}
+\end{figure}
+\par
+
+The initial state and the state after the two Hadamards are
+\begin{equation}
+ \ket{\Pi_0}=\ket{00}\ket{\psi},\qquad
+ \ket{\Pi_1}=\frac12\sum_{x_1,x_0\in\{0,1\}}\ket{x_1x_0}\ket{\psi}.
+\end{equation}
+The first controlled operation contributes $e^{2\pi\ii x_0\theta}$. The next two each contribute $e^{2\pi\ii x_1\theta}$. Keeping every intermediate state gives
+\begin{align}
+ \ket{\Pi_2}&=\frac12\sum_{x_1,x_0}e^{2\pi\ii x_0\theta}\ket{x_1x_0}\ket{\psi},\\
+ \ket{\Pi_3}&=\frac12\sum_{x_1,x_0}e^{2\pi\ii(x_0+x_1)\theta}\ket{x_1x_0}\ket{\psi},\\
+ \ket{\Pi_4}&=\frac12\sum_{x_1,x_0}e^{2\pi\ii(2x_1+x_0)\theta}\ket{x_1x_0}\ket{\psi}
+ =\left(\frac12\sum_{x=0}^3e^{2\pi\ii x\theta}\ket{x}\right)\otimes\ket{\psi}.
+ \label{eq:phase:fourstate}
+\end{align}
+The integer $x=2x_1+x_0$ combines the binary weights. The control register now contains a discrete phase wave, rather than two unrelated measurement experiments.
+
+First suppose that $\theta=y/4$ for $y\in\{0,1,2,3\}$. Define
+\begin{equation}
+ \ket{\phi_y}=\frac12\sum_{x=0}^3e^{2\pi\ii xy/4}\ket{x}.
+ \label{eq:phase:fourier4states}
+\end{equation}
+Expanding in the ordered computational basis $\ket0,\ket1,\ket2,\ket3$ gives
+\begin{align}
+ \ket{\phi_0}&=\tfrac12(\ket0+\ket1+\ket2+\ket3),\\
+ \ket{\phi_1}&=\tfrac12(\ket0+\ii\ket1-\ket2-\ii\ket3),\\
+ \ket{\phi_2}&=\tfrac12(\ket0-\ket1+\ket2-\ket3),\\
+ \ket{\phi_3}&=\tfrac12(\ket0-\ii\ket1-\ket2+\ii\ket3).
+\end{align}
+For example, $y=1$ produces the successive complex phases $1,\ii,-1,-\ii$. These are amplitudes, not probabilities. The inner products are
+\begin{equation}
+ \braket{\phi_z}{\phi_y}=\frac14\sum_{x=0}^3e^{2\pi\ii x(y-z)/4}=\delta_{yz}.
+\end{equation}
+When $y=z$, all four summands equal one. Otherwise they are nontrivial fourth roots of unity and sum to zero. The four phase states therefore form an orthonormal basis.
+
+Arrange these states as columns to obtain
+\begin{equation}
+ F_4=(\ket{\phi_0},\ket{\phi_1},\ket{\phi_2},\ket{\phi_3})
+ =\frac12\begin{pmatrix}
+ 1&1&1&1\\ 1&\ii&-1&-\ii\\1&-1&1&-1\\1&-\ii&-1&\ii
+ \end{pmatrix}.
+\end{equation}
+By construction, $F_4\ket y=\ket{\phi_y}$. Recovering the label $y$ requires the inverse transformation, $F_4^{\dagger}$, followed by measurement.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[column sep=0.7cm]
+ \lstick{$A$} & \gate[2]{F_4^{\dagger}} & \meter{} & \setwiretype{c} \\
+ & & \meter{} & \setwiretype{c} \\
+ \lstick{$\ket{\psi}_S$} & \qw\qwbundle{n} & \qw & \qw
+\end{quantikz}
+\caption{Decoding the four-dimensional phase state with $F_4^{\dagger}$. The two measured bits represent $y_1y_0$; the Fourier operation acts only on the control register.}
+\label{fig:phase:inverse4}
+\end{figure}
+\par
+
+For a phase outside $\{0,1/4,1/2,3/4\}$, the prepared control state is still a linear combination of the $\ket{\phi_y}$, but generally has several nonzero coefficients. The inverse transform then produces a probability distribution over the labels. Increasing the register to $m$ qubits refines the phase grid to spacing $2^{-m}$.
+
+\section{The quantum Fourier transform}
+
+\subsection{Definition and a recursive circuit}
+
+Let $N=2^m$ and $\omega_N=e^{2\pi\ii/N}$. We use the positive-phase Fourier convention,
+\begin{align}
+ F_N&=\frac1{\sqrt N}\sum_{x,y=0}^{N-1}\omega_N^{xy}\ketbra{x}{y},\\
+ F_N\ket y&=\frac1{\sqrt N}\sum_{x=0}^{N-1}\omega_N^{xy}\ket x,\\
+ F_N^{\dagger}\ket x&=\frac1{\sqrt N}\sum_{y=0}^{N-1}\omega_N^{-xy}\ket y.
+ \label{eq:phase:qftdef}
+\end{align}
+The matrix has $N$ rows and columns, but acts on an $m$-qubit register. In particular, $F_2=H$.
+
+To establish unitarity, consider a difference $d$ of two integer labels. If $d\equiv0\pmod N$, the sum $\sum_{x=0}^{N-1}\omega_N^{xd}$ equals $N$. Otherwise $q=\omega_N^d$ satisfies $q\ne1$ and $q^N=1$, giving
+\begin{equation}
+ \sum_{x=0}^{N-1}q^x=\frac{1-q^N}{1-q}=0.
+\end{equation}
+It follows that
+\begin{equation}
+ \bra z F_N^{\dagger}F_N\ket y
+ =\frac1N\sum_{x=0}^{N-1}\omega_N^{x(y-z)}=\delta_{yz},
+\end{equation}
+Thus the Fourier columns are orthonormal. The special structure of these columns also permits a circuit with far fewer than $N^2$ gates.
+
+The elementary controlled-phase gate used in the construction is
+\begin{equation}
+ \operatorname{CP}(\alpha)=\ketbra0{0}\otimes I+
+ \ketbra1{1}\otimes\begin{pmatrix}1&0\\0&e^{\ii\alpha}\end{pmatrix}
+ =\operatorname{diag}(1,1,1,e^{\ii\alpha}).
+ \label{eq:phase:cp}
+\end{equation}
+Only the $\ket{11}$ branch acquires a phase, so exchanging the two wires leaves the gate unchanged. In the conventional notation $R_j=\diag(1,e^{2\pi\ii/2^j})$, controlled $R_j$ is $\operatorname{CP}(2\pi/2^j)$\cite{NC2010}.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[column sep=1cm]
+ & \phase[label style={yshift=2.5mm}]{\alpha}\wire[d][1]{q} & \qw \\
+ & \control{} & \qw
+\end{quantikz}
+\caption{A symmetric controlled-phase gate. Both endpoints are filled dots; $\alpha$ is the phase acquired by the $\ket{11}$ component.}
+\label{fig:phase:cp}
+\end{figure}
+\par
+
+We now construct $F_N$ from $F_L$, where $L=2^{m-1}$ and $N=2L$. Separate the least significant input bit:
+\begin{equation}
+ u=2x+a,\quad 0\le x<L,\quad a\in\{0,1\},\qquad
+ \ket u=\ket x\ket a.
+ \label{eq:phase:recursiveinput}
+\end{equation}
+The register $\ket x$ occupies the upper $m-1$ wires, while $a$ occupies the bottom wire. Applying $F_L$ to the upper register gives
+\begin{equation}
+ \ket x\ket a\longmapsto
+ \frac1{\sqrt L}\sum_{y=0}^{L-1}\omega_L^{xy}\ket y\ket a.
+ \label{eq:phase:recursive1}
+\end{equation}
+Write $y=\sum_{k=0}^{m-2}2^ky_k$. Between $a$ and each $y_k$, apply a controlled phase of angle
+\begin{equation}
+ \alpha_k=\frac{2\pi\,2^k}{N}
+\end{equation}
+The diagonal gates commute, and their combined contribution is
+\begin{equation}
+ \prod_{k=0}^{m-2}e^{\ii\alpha_k a y_k}
+ =e^{2\pi\ii a\sum_k2^ky_k/N}=\omega_N^{ay}.
+\end{equation}
+The state is therefore
+\begin{equation}
+ \frac1{\sqrt L}\sum_{y=0}^{L-1}\omega_L^{xy}\omega_N^{ay}\ket y\ket a.
+ \label{eq:phase:recursive2}
+\end{equation}
+Next apply $H$ to $a$. Since $H\ket a=2^{-1/2}\sum_{b=0}^1(-1)^{ab}\ket b$, this gives
+\begin{equation}
+ \frac1{\sqrt N}\sum_{y=0}^{L-1}\sum_{b=0}^1
+ \omega_L^{xy}\omega_N^{ay}(-1)^{ab}\ket y\ket b.
+ \label{eq:phase:recursive3}
+\end{equation}
+Finally move the bottom output bit $b$ to the top by swaps, preserving the internal order of the $y$ bits. This implements $\ket y\ket b\mapsto\ket b\ket y$. With the output integer $v=Lb+y$, the phase factor satisfies
+\begin{align}
+ \omega_L^{xy}\omega_N^{ay}(-1)^{ab}
+ &=\omega_N^{2xy+ay+Lab}\\
+ &=\omega_N^{(2x+a)(Lb+y)}.
+ \label{eq:phase:recursiveidentity}
+\end{align}
+Indeed,
+\begin{equation}
+ (2x+a)(Lb+y)=2Lxb+2xy+Lab+ay.
+\end{equation}
+The extra term is $2Lxb=Nxb$, an integer multiple of $N$, and hence contributes no phase. As $y$ and $b$ range over their allowed values, $v$ runs through all integers from $0$ to $N-1$. The final state is
+\begin{equation}
+ \frac1{\sqrt N}\sum_{v=0}^{N-1}\omega_N^{uv}\ket v=F_N\ket u.
+ \label{eq:phase:recursivefinal}
+\end{equation}
+The input integer is assembled as $u=2x+a$, whereas the output is assembled as $v=Lb+y$. The permutation is an essential part of this circuit, not a change in notation that can be omitted while preserving the same matrix.
+
+For $N=32$, the four upper output bits have weights $8,4,2,1$. Their controlled-phase angles with $a$ are therefore $\pi/2,\pi/4,\pi/8,\pi/16$, respectively. Figure~\ref{fig:phase:recursive32} implements this recursion explicitly.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[column sep=0.23cm,row sep=0.3cm]
+ \lstick{$x_3$} & \gate[4]{F_{16}} & \phase[label style={yshift=2.5mm}]{\frac\pi2}\wire[d][4]{q} & \qw & \qw & \qw & \qw & \qw & \qw & \qw & \swap{1} & \rstick{$b$}\qw \\
+ \lstick{$x_2$} & & \qw & \phase[label style={yshift=2.5mm}]{\frac\pi4}\wire[d][3]{q} & \qw & \qw & \qw & \qw & \qw & \swap{1} & \targX{} & \rstick{$y_3$}\qw \\
+ \lstick{$x_1$} & & \qw & \qw & \phase[label style={yshift=2.5mm}]{\frac\pi8}\wire[d][2]{q} & \qw & \qw & \qw & \swap{1} & \targX{} & \qw & \rstick{$y_2$}\qw \\
+ \lstick{$x_0$} & & \qw & \qw & \qw & \phase[label style={yshift=2.5mm}]{\frac\pi{16}}\wire[d][1]{q} & \qw & \swap{1} & \targX{} & \qw & \qw & \rstick{$y_1$}\qw \\
+ \lstick{$a$} & \qw & \control{} & \control{} & \control{} & \control{} & \gate{H} & \targX{} & \qw & \qw & \qw & \rstick{$y_0$}\qw
+\end{quantikz}
+\caption{A recursive implementation of $F_{32}$. The input is $\ket{x_3x_2x_1x_0a}$ and the output is $\ket{by_3y_2y_1y_0}$. Four adjacent swaps move the bottom output bit to the top without reversing the other bits.}
+\label{fig:phase:recursive32}
+\end{figure}
+\par
+
+\subsection{Product-state form and the standard decomposition}
+
+An alternative decomposition begins with the most significant input wire: apply a Hadamard, add controlled phases from the less significant wires, and repeat on each subsequent wire. A final reversal of all output wires restores the standard binary order\cite{NC2010}. This construction follows from factoring the Fourier output:
+\begin{align}
+ F_{2^m}\ket x
+ &=\frac1{\sqrt{2^m}}\sum_{y_0,\ldots,y_{m-1}}
+ \prod_{k=0}^{m-1}e^{2\pi\ii x y_k/2^{m-k}}\ket{y_{m-1}\cdots y_0}\\
+ &=\bigotimes_{k=m-1,m-2,\ldots,0}
+ \frac{\ket0+e^{2\pi\ii x/2^{m-k}}\ket1}{\sqrt2}.
+ \label{eq:phase:qftproduct}
+\end{align}
+For three input qubits, the factors in most-significant-output-first order are
+\begin{equation}
+ F_8\ket{x_2x_1x_0}=
+ \frac{\ket0+e^{2\pi\ii(0.x_0)}\ket1}{\sqrt2}
+ \otimes\frac{\ket0+e^{2\pi\ii(0.x_1x_0)}\ket1}{\sqrt2}
+ \otimes\frac{\ket0+e^{2\pi\ii(0.x_2x_1x_0)}\ket1}{\sqrt2},
+\end{equation}
+The notation $0.x_1x_0$ means the binary fraction $x_1/2+x_0/4$, and similarly for the other factors. Integer parts of $x/2^j$ do not affect the exponential. Before the final swaps, the circuit generates these factors in the opposite wire order.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[column sep=0.42cm]
+ \lstick{$x_2$} & \gate{H} & \control{} & \control{} & \qw & \qw & \qw & \swap{2} & \qw \\
+ \lstick{$x_1$} & \qw & \phase[label style={yshift=2.5mm}]{\frac\pi2}\wire[u][1]{q} & \qw & \gate{H} & \control{} & \qw & \qw & \qw \\
+ \lstick{$x_0$} & \qw & \qw & \phase[label style={yshift=2.5mm}]{\frac\pi4}\wire[u][2]{q} & \qw & \phase[label style={yshift=2.5mm}]{\frac\pi2}\wire[u][1]{q} & \gate{H} & \targX{} & \qw
+\end{quantikz}
+\caption{The standard positive-phase $F_8$ circuit. The final swap reverses the output bit order. Its inverse is obtained by reversing the complete gate sequence and negating all controlled-phase angles.}
+\label{fig:phase:standard8}
+\end{figure}
+\par
+
+The recursive and standard constructions implement the same $F_{2^m}$, but their intermediate wire roles differ. The recursion separates the least significant input bit and produces the most significant output bit. The standard construction produces factors that require a final reversal. If that reversal is omitted, the circuit implements $B_mF_{2^m}$, where $B_m$ is the bit-reversal permutation, rather than $F_{2^m}$ itself.
+
+\subsection{Gate counts and the synthesis model}
+
+In the recursive construction, level $m$ adds $m-1$ controlled-phase gates, $m-1$ swaps, and one Hadamard. Counting each of these as one gate gives
+\begin{equation}
+ S_1=1,\qquad S_m=S_{m-1}+2(m-1)+1=S_{m-1}+2m-1,
+ \qquad S_m=\sum_{j=1}^m(2j-1)=m^2.
+ \label{eq:phase:qftcost}
+\end{equation}
+The standard decomposition instead uses $m$ Hadamards, $m(m-1)/2$ controlled phases, and $\lfloor m/2\rfloor$ reversal swaps:
+\begin{equation}
+ m+\frac{m(m-1)}2+\left\lfloor\frac m2\right\rfloor=O(m^2).
+\end{equation}
+Both constructions have quadratic gate count in $m$. Replacing each swap by three CNOTs changes the constant but not the asymptotic order.
+
+This count assumes access to the required arbitrary-angle rotations. On a discrete gate set, the rotation accuracy and synthesis cost must also be specified. A circuit containing $O(m^2)$ ideal rotations does not, without those assumptions, give an exact physical gate count for every implementation.
+
+\section{Quantum phase estimation}
+
+\subsection{Coherent encoding and exact decoding}
+
+Initialize $m$ controls in $\ket{0^m}$ and apply $H^{\otimes m}$:
+\begin{equation}
+ \ket{\Pi_1}=\frac1{\sqrt N}\sum_{x=0}^{N-1}\ket x\ket\psi,\qquad N=2^m.
+\end{equation}
+Control $U^{2^k}$ from bit $x_k$. On a fixed computational-basis branch, these operations compose to
+\begin{equation}
+ \prod_{k=0}^{m-1}(U^{2^k})^{x_k}
+ =U^{\sum_k2^kx_k}=U^x,
+\end{equation}
+The eigenstate promise then gives
+\begin{equation}
+ \ket{\Pi_2}=\frac1{\sqrt N}\sum_{x=0}^{N-1}\ket x U^x\ket\psi
+ =\left(\frac1{\sqrt N}\sum_{x=0}^{N-1}e^{2\pi\ii x\theta}\ket x\right)\otimes\ket\psi.
+ \label{eq:phase:qpephasewave}
+\end{equation}
+The system factors out, while the estimation register contains the positive phase wave. Figure~\ref{fig:phase:qpe} gives the three-control instance.
+\par
+\begin{figure}[htbp]
+\centering
+\begin{quantikz}[column sep=0.5cm]
+ \lstick{$\ket0_{x_2}$} & \gate{H} & \ctrl{3} & \qw & \qw & \gate[3]{F_8^{\dagger}} & \meter{} & \setwiretype{c} \\
+ \lstick{$\ket0_{x_1}$} & \gate{H} & \qw & \ctrl{2} & \qw & & \meter{} & \setwiretype{c} \\
+ \lstick{$\ket0_{x_0}$} & \gate{H} & \qw & \qw & \ctrl{1} & & \meter{} & \setwiretype{c} \\
+ \lstick{$\ket\psi_S$} & \qw & \gate{U^4}\qwbundle{n} & \gate{U^2} & \gate{U} & \qw & \qw & \qw
+\end{quantikz}
+\caption{Three-control phase estimation. The controls have weights $4,2,1$ from top to bottom. The measured bits represent $Y=4Y_2+2Y_1+Y_0$. For $m$ controls the largest power is $U^{2^{m-1}}$.}
+\label{fig:phase:qpe}
+\end{figure}
+\par
+
+Applying the inverse Fourier transform and collecting terms with the same output label yields
+\begin{align}
+ \ket{\Pi_3}
+ &=\frac1N\sum_{x=0}^{N-1}\sum_{y=0}^{N-1}
+ e^{2\pi\ii x\theta}e^{-2\pi\ii xy/N}\ket y\ket\psi\\
+ &=\sum_{y=0}^{N-1}A_y(\theta)\ket y\ket\psi,\\
+ A_y(\theta)&=\frac1N\sum_{x=0}^{N-1}e^{2\pi\ii x(\theta-y/N)}.
+ \label{eq:phase:qpeamplitude}
+\end{align}
+If $\theta=y_*/N$, all terms contributing to $A_{y_*}$ have phase one. For every other $y$, their sum is a nontrivial sum of roots of unity and vanishes. The algorithm therefore outputs $Y=y_*$ with certainty and leaves the system in $\ket\psi$.
+
+The inverse transform is required by the sign convention: its negative exponential cancels the positive phase wave at the correct label. Applying the positive transform instead would decode the negative phase modulo one.
+
+\subsection{Probability distribution and approximation guarantees}
+
+For a general phase, let $\Delta_y=\theta-y/N$. If $e^{2\pi\ii\Delta_y}\ne1$, the geometric series gives
+\begin{equation}
+ A_y(\theta)=\frac{1-e^{2\pi\ii N\Delta_y}}{N(1-e^{2\pi\ii\Delta_y})},
+ \qquad
+ \Pr(Y=y)=\frac1{N^2}
+ \left|\frac{1-e^{2\pi\ii N\Delta_y}}{1-e^{2\pi\ii\Delta_y}}\right|^2.
+ \label{eq:phase:qpeprobgeom}
+\end{equation}
+The amplitude is normalized by $N$, so the probability is normalized by $N^2$. Using $|1-e^{\ii t}|=2|\sin(t/2)|$ gives the equivalent expression
+\begin{equation}
+ p_y(\theta)=\frac{\sin^2(\pi N\Delta_y)}{N^2\sin^2(\pi\Delta_y)}.
+ \label{eq:phase:qpeprobsine}
+\end{equation}
+At a zero denominator, the original finite sum or its limiting value must be used; the displayed ratio should not be evaluated as $0/0$. Since phases are defined modulo one, an estimate of zero can be close to a phase just below one. The appropriate distance is
+\begin{equation}
+ d_{\mathbb T}(\theta,y/N)=\min_{\ell\in\mathbb Z}|\theta-y/N-\ell|.
+ \label{eq:phase:circulardistance}
+\end{equation}
+
+Choose $y_*$ to be a nearest integer to $N\theta$, modulo $N$. Then
+\begin{equation}
+ d_{\mathbb T}(\theta,y_*/N)\le\frac1{2N}=2^{-(m+1)}.
+\end{equation}
+Select a representative $\Delta$ with $|\Delta|\le1/(2N)$. At $\Delta=0$ the success probability is one. Otherwise $0<\pi N|\Delta|\le\pi/2$. Concavity of sine on this interval gives $\sin t\ge2t/\pi$, while $\sin s\le s$ for $s\ge0$. Consequently,
+\begin{equation}
+ p_{y_*}(\theta)
+ =\frac{\sin^2(\pi N\Delta)}{N^2\sin^2(\pi\Delta)}
+ \ge\frac{(2N|\Delta|)^2}{N^2(\pi|\Delta|)^2}
+ =\frac4{\pi^2}\approx0.4053.
+ \label{eq:phase:qpesuccess}
+\end{equation}
+This is a lower bound on the probability of obtaining a particular nearest grid point in one run. It does not assert that every outcome has the stated error, nor is it a bound on the expected error. At a half-grid phase, either of the two equally near labels satisfies the same lower bound.
+
+For more distant labels, choose the representative of $\Delta_y$ in $[-1/2,1/2]$. If $|\Delta_y|\ge1/N$, then
+\begin{equation}
+ |\sin(\pi\Delta_y)|\ge2|\Delta_y|,
+ \qquad
+ p_y(\theta)\le\frac1{4N^2|\Delta_y|^2}\le\frac14.
+ \label{eq:phase:qpefar}
+\end{equation}
+Here the numerator in Equation~\eqref{eq:phase:qpeprobsine} was bounded by one. The bound $1/4$ applies to each distant label separately, not to the sum of all distant-label probabilities.
+
+Higher confidence requires additional estimation bits or repetitions with specified classical processing. If a $t$-bit register is used but only $m<t$ bits of accuracy are requested, a tail bound can be obtained by summing Equation~\eqref{eq:phase:qpefar}; a single-label bound is insufficient. The order-finding application below uses a constant probability of a sufficiently accurate estimate and permits repetition.
+
+\subsection{Resources and superpositions of eigenstates}
+
+The Fourier stage requires $O(m^2)$ ideal gates, but the controlled powers may dominate the cost. If one controlled application of $U$ is the only available primitive and all powers are implemented by repetition, the total number of calls is
+\begin{equation}
+ \sum_{k=0}^{m-1}2^k=2^m-1.
+ \label{eq:phase:qpequerycost}
+\end{equation}
+An $m$-bit phase estimate therefore does not use a number of such queries polynomial in $m$. For an error scale $\varepsilon\sim2^{-m}$, this implementation uses $O(1/\varepsilon)$ calls. When structured powers have short direct circuits, their actual costs should instead be added separately.
+
+The eigenstate need not always be prepared explicitly. If the system input is $\ket\eta=\sum_jc_j\ket{\psi_j}$, linearity gives the final joint state
+\begin{equation}
+ \sum_j c_j\sum_y A_y(\theta_j)\ket y\ket{\psi_j}.
+ \label{eq:phase:qpesuperposition}
+\end{equation}
+Orthogonality of the eigenvectors implies that the measurement probability is $\sum_j|c_j|^2p_y(\theta_j)$. Conditioned on $y$, the system state is proportional to $\sum_jc_jA_y(\theta_j)\ket{\psi_j}$. A measurement can be described as selecting a definite eigenstate only when the corresponding phases are resolved. This distinction is central to the state preparation used in order finding.
+
+\section{Order finding by modular multiplication}
+
+\subsection{A permutation unitary and its eigenstates}
+
+Let $\mathbb Z_N=\{0,1,\ldots,N-1\}$, with arithmetic modulo $N$. Its invertible elements form the multiplicative group
+\begin{equation}
+ \mathbb Z_N^{\times}=\{a\in\mathbb Z_N:\gcd(a,N)=1\}.
+\end{equation}
+For example, $3\cdot5\equiv1\pmod7$, so $5$ is the multiplicative inverse of $3$ modulo $7$. For $a\in\mathbb Z_N^{\times}$, its order is the least positive integer $r$ satisfying
+\begin{equation}
+ a^r\equiv1\pmod N
+ \label{eq:phase:order}
+\end{equation}
+The order exists because a sequence of powers in a finite group must repeat. If $a^s=a^t$ with $s>t$, multiplication by $a^{-t}$ gives $a^{s-t}=1$. The powers $1,a,\ldots,a^{r-1}$ are distinct, so $r\le|\mathbb Z_N^{\times}|\le N$.
+
+Order finding takes $N$ and a coprime integer $a$ as input and outputs $r$. The case $a\equiv1\pmod N$ has $r=1$ and can be returned immediately by a classical comparison; the nontrivial phase-recovery discussion concerns $r>1$. Order finding is the quantum core of Shor's factoring algorithm\cite{Shor1997}. Define the modular-multiplication operator by
+\begin{equation}
+ M_a\ket x=\ket{ax\bmod N},\qquad 0\le x<N.
+ \label{eq:phase:modularmult}
+\end{equation}
+Multiplication by an invertible $a$ permutes the computational basis, hence $M_a$ is unitary and $M_a^{\dagger}=M_{a^{-1}}$. A physical register uses $n=\lceil\log_2N\rceil$ qubits. If $N$ is not a power of two, the operator must also be defined on labels $x\ge N$; assigning the identity to these remaining basis states gives a unitary extension. Specifying only the valid modular labels does not define a complete $n$-qubit gate.
+
+On the orbit of $\ket1$, modular multiplication is a cyclic shift of length $r$:
+\begin{equation}
+ \ket1\longmapsto\ket a\longmapsto\ket{a^2}\longmapsto\cdots
+ \longmapsto\ket{a^{r-1}}\longmapsto\ket1,
+\end{equation}
+All powers in these state labels are interpreted modulo $N$. With $\omega_r=e^{2\pi\ii/r}$, define
+\begin{equation}
+ \ket{\psi_j}=\frac1{\sqrt r}\sum_{k=0}^{r-1}\omega_r^{-jk}\ket{a^k\bmod N},
+ \qquad j=0,1,\ldots,r-1.
+ \label{eq:phase:ordereigenstates}
+\end{equation}
+The $j=0$ state is a uniform superposition and is invariant under the shift. For general $j$, change the summation index to $\ell=k+1$ modulo $r$:
+\begin{align}
+ M_a\ket{\psi_j}
+ &=\frac1{\sqrt r}\sum_{k=0}^{r-1}\omega_r^{-jk}\ket{a^{k+1}\bmod N}\\
+ &=\frac1{\sqrt r}\sum_{\ell=0}^{r-1}\omega_r^{-j(\ell-1)}\ket{a^{\ell}\bmod N}
+ =\omega_r^j\ket{\psi_j}.
+ \label{eq:phase:ordereigenvalue}
+\end{align}
+At the wraparound term, the identities $a^r=1$ and $\omega_r^{jr}=1$ ensure the same coefficient rule. The negative exponent in the eigenstate coefficients therefore produces the positive eigenvalue $\omega_r^j$.
+
+Because the orbit basis states are distinct,
+\begin{equation}
+ \braket{\psi_i}{\psi_j}=\frac1r\sum_{k=0}^{r-1}\omega_r^{(i-j)k}=\delta_{ij}.
+\end{equation}
+The states form an orthonormal basis of the orbit subspace, which need not be the full system Hilbert space. Phase estimation on $\ket{\psi_j}$ gives
+\begin{equation}
+ \frac{Y}{2^m}\approx\frac jr.
+ \label{eq:phase:orderphase}
+\end{equation}
+
+\subsection{Recovering an order from a rational approximation}
+
+For $r>1$, the special input $\ket{\psi_1}$ would yield an estimate of $1/r$. This case explains the accuracy scale but does not solve the general state-preparation problem. Adjacent reciprocal values have spacings
+\begin{equation}
+ \frac1r-\frac1{r+1}=\frac1{r(r+1)},\qquad
+ \frac1{r-1}-\frac1r=\frac1{r(r-1)}\quad(r>1).
+\end{equation}
+If the estimate is decoded by selecting the nearest reciprocal $1/q$, an error smaller than $1/[2r(r+1)]$ is sufficient. If the specified rule is instead to round $1/z$, where $z=Y/2^m$, the condition is
+\begin{equation}
+ \frac1{r+1/2}<z<\frac1{r-1/2}.
+\end{equation}
+A symmetric sufficient error bound for this rule is
+\begin{equation}
+ \left|z-\frac1r\right|<\frac1{r(2r+1)}.
+ \label{eq:phase:roundinverse}
+\end{equation}
+Both decoding procedures require an $O(r^{-2})$ accuracy scale, but their thresholds are different. Rounding a reciprocal and choosing the closest reciprocal must not be treated as identical operations.
+
+In practice the observed phase is usually $j/r$. If $\gcd(j,r)>1$, reduction of the fraction produces a denominator smaller than $r$; if $j=0$, the phase carries no useful denominator information. The classical continued-fraction method addresses this situation\cite{NC2010,Shor1997}. Write the reduced fraction as $p/q$. If
+\begin{equation}
+ \left|\frac{Y}{2^m}-\frac pq\right|<\frac1{2q^2},
+ \label{eq:phase:cfcriterion}
+\end{equation}
+then $p/q$ is a continued-fraction convergent of $Y/2^m$. Since $q\le r\le N$, the stronger error requirement $1/(2N^2)$ suffices uniformly. Choosing $2^m>N^2$ ensures that the nearest-grid event meets this requirement, with probability at least the constant in Equation~\eqref{eq:phase:qpesuccess}.
+
+The continued-fraction criterion is a classical number-theoretic result. On the sufficiently accurate event, the reconstructed reduced denominator is $q=r/\gcd(j,r)$; it equals the order when $j$ and $r$ are coprime. A smaller reduced denominator cannot pass $a^q\equiv1\pmod N$ for $r>1$.
+
+For a general candidate, a successful modular-power test establishes only $r\mid q$. Identifying the least order also requires a minimality argument or a justified recovery procedure based on repeated samples. Ruling out all proper divisors of a verified candidate certifies minimality, as in the small example below; no efficient general procedure for that divisor check is assumed here. Repeated denominator recovery must retain its approximation and success conditions rather than treating any verified multiple as the order.
+
+To carry out the classical step, repeatedly take the integer part and invert the remaining fractional part of $z=Y/2^m$:
+\begin{equation}
+ z=[a_0;a_1,\ldots,a_t]
+ =a_0+\frac1{a_1+\dfrac1{\ddots+\dfrac1{a_t}}}.
+\end{equation}
+For rational $z$ this is the Euclidean algorithm on $(Y,2^m)$. Initialize the numerator and denominator recurrences by
+\begin{equation}
+ p_{-2}=0,\quad p_{-1}=1,\qquad q_{-2}=1,\quad q_{-1}=0
+\end{equation}
+and compute the convergents using
+\begin{equation}
+ p_s=a_s p_{s-1}+p_{s-2},\qquad q_s=a_s q_{s-1}+q_{s-2}.
+\end{equation}
+Consider convergents with denominators at most $N$ and check the relevant accuracy and modular-power conditions. The accuracy scale also ensures uniqueness among all reduced fractions within the denominator bound. For distinct $p/q$ and $p'/q'$ with $q,q'\le N$,
+\begin{equation}
+ \left|\frac pq-\frac{p'}{q'}\right|
+ =\frac{|pq'-p'q|}{qq'}\ge\frac1{qq'}\ge\frac1{N^2}.
+\end{equation}
+They cannot both be strictly within $1/(2N^2)$ of $z$. This separation explains the necessary precision, while the continued-fraction theorem gives an efficient means to locate the fraction without checking every possible denominator.
+
+\begin{example}[Order finding and continued fractions]
+Take $N=7$ and $a=3$. The powers are
+\begin{equation}
+ 3^0,3^1,\ldots,3^6\pmod7=1,3,2,6,4,5,1,
+\end{equation}
+Thus $r=6$. Suppose the selected eigenphase is $1/6$ and the estimation register has $m=6$ bits, so that $2^m=64>7^2$. On obtaining the nearest label $Y=11$,
+\begin{equation}
+ z=\frac{11}{64},\qquad \left|\frac{11}{64}-\frac16\right|=\frac1{192}<\frac1{2\cdot6^2}.
+\end{equation}
+The Euclidean divisions are $64=5\cdot11+9$, $11=1\cdot9+2$, $9=4\cdot2+1$, and $2=2\cdot1$. They give
+\begin{equation}
+ \frac{11}{64}=[0;5,1,4,2],\qquad
+ \frac{p_s}{q_s}=0,\ \frac15,\ \frac16,\ \frac5{29},\ \frac{11}{64}.
+\end{equation}
+The candidate denominator $6$ passes $3^6\equiv1\pmod7$, while its proper divisors $1,2,3$ do not; the order is therefore $6$. If the selected phase were $2/6=1/3$, reduction would give only denominator $3$, and $3^3\equiv6\not\equiv1\pmod7$. That sample alone would not establish the order. The random numerator introduces a success condition separate from the precision of phase estimation.
+\end{example}
+
+\subsection{State preparation and efficient controlled powers}
+
+The easily prepared basis state $\ket1$ is already a uniform superposition of the orbit eigenstates. Indeed,
+\begin{align}
+ \frac1{\sqrt r}\sum_{j=0}^{r-1}\ket{\psi_j}
+ &=\frac1r\sum_{k=0}^{r-1}\left(\sum_{j=0}^{r-1}\omega_r^{-jk}\right)\ket{a^k\bmod N}\\
+ &=\ket1.
+ \label{eq:phase:oneeigenexpansion}
+\end{align}
+The inner sum is $r$ for $k=0$ and zero otherwise. The identity is an analysis of $\ket1$, not a prescription requiring prior knowledge of $r$ in order to prepare it. After phase estimation the joint state is
+\begin{equation}
+ \frac1{\sqrt r}\sum_{j=0}^{r-1}\sum_{y=0}^{2^m-1}A_y(j/r)\ket y\ket{\psi_j}.
+ \label{eq:phase:orderfinalsuperposition}
+\end{equation}
+Its control measurement distribution is equivalent to choosing $j$ uniformly and then sampling the QPE distribution for phase $j/r$. No unknown eigenstate must be prepared deliberately, but the classical processing must allow for a random numerator that may share factors with $r$.
+
+The controlled powers are also structured. Repeating $M_a$ an exponentially large number of times is unnecessary because
+\begin{equation}
+ M_a^s\ket x=\ket{a^s x\bmod N}=M_{a^s\bmod N}\ket x.
+ \label{eq:phase:modularpowers}
+\end{equation}
+Classical repeated squaring computes
+\begin{equation}
+ b_0=a\bmod N,\qquad b_{k+1}=b_k^2\bmod N,
+\end{equation}
+so that $b_k=a^{2^k}\bmod N$. Each $b_k$ still has at most $n$ bits. Controlled $M_a^{2^k}$ can be implemented as controlled $M_{b_k}$, rather than as $2^k$ repeated applications of $M_a$.
+
+Under an elementary reversible-arithmetic implementation, multiplication by an $n$-bit constant modulo $N$ has an $O(n^2)$ gate upper bound, with its work register uncomputed. The $m$ controlled multiplications then cost $O(mn^2)$. Taking $m=O(n)$ to achieve $2^m>N^2$ gives $O(n^3)$, together with the $O(m^2)$ Fourier stage. This upper bound depends on an arithmetic circuit construction; it does not follow merely from writing a permutation as a single box.
+
+For an odd composite $N$, a verified even order connects to factoring as follows. If $a^{r/2}\not\equiv-1\pmod N$, let $b=a^{r/2}\bmod N$. Then $b^2\equiv1$, so $N$ divides $(b-1)(b+1)$, while minimality of $r$ excludes $b\equiv1$. The greatest common divisors $\gcd(b-1,N)$ and $\gcd(b+1,N)$ yield nontrivial factors. A complete factoring algorithm must also handle the choice of $a$, odd orders, and the unhelpful square root $-1$; the order-finding analysis above is its principal quantum component, not a proof that every trial factors $N$.
+
+
+\chapter{Quantum Search and Amplitude Amplification}
+\label{ch:search}
+
+\section{Unstructured search and oracle access}
+
+The previous algorithms extract a period, a linear relation, or an eigenphase. Unstructured search assumes less information: a predicate identifies whether a candidate is acceptable, but supplies no additional structure to locate one. Grover's algorithm uses coherent phase marking and interference to increase the probability of observing an acceptable candidate\cite{Grover1996,NC2010}.
+
+Let $\Sigma=\{0,1\}$ and let the candidate space be $\Sigma^n$, of size $N=2^n$. The predicate is
+\begin{equation}
+ f:\Sigma^n\longrightarrow\Sigma.
+ \label{eq:search-predicate}
+\end{equation}
+A string $x$ is a solution, or marked element, when $f(x)=1$. The goal is to output any such string and verify it, rather than enumerate all solutions or recover a designated one. We write $x=x_{n-1}\cdots x_0$, with the most significant wire at the top of a circuit. Define
+\begin{equation}
+ A_0=\{x\in\Sigma^n:f(x)=0\},\qquad
+ A_1=\{x\in\Sigma^n:f(x)=1\},\qquad s=|A_1|.
+ \label{eq:search-sets}
+\end{equation}
+The success event is $X\in A_1$, where $X$ is the measured string. We first assume $s>0$ and discuss termination when $s=0$ below.
+
+Complexity is initially measured in calls to $f$. Oracle implementation, state preparation, error correction, and measurement contribute additional physical costs. In the classical black-box model, deterministic search has worst-case cost $\Theta(N)$ for a unique marked element. A fortunate first query may succeed, but an adversarially located solution can require checking all candidates. Under a unique-solution promise, the last candidate could be inferred after $N-1$ failures; explicit verification adds the final query without changing the asymptotic order. Uniformly inspecting $q$ distinct locations finds a uniformly located unique solution with probability $q/N$, so a classical randomized algorithm also requires linearly many queries for constant success probability. More generally, uniform sampling succeeds with probability $s/N$ per trial and has expected query cost $N/s$.
+
+\subsection{Bit queries, phase queries, and verification}
+
+For the oracle identities in this subsection, place an auxiliary qubit before the data register and define
+\begin{equation}
+ U_f\ket{a}\ket{x}=\ket{a\oplus f(x)}\ket{x},\qquad a\in\Sigma.
+ \label{eq:search-bit-oracle}
+\end{equation}
+Circuit diagrams place the data register above the auxiliary instead. Permuting the tensor factors expresses the same operation as $\ket x\ket a\mapsto\ket x\ket{a\oplus f(x)}$. Prepare the auxiliary state
+\begin{equation}
+ \ket{-}=\frac{\ket0-\ket1}{\sqrt2},\qquad
+ X\ket{-}=-\ket{-}.
+\end{equation}
+Applying the bit oracle gives
+\begin{align}
+ U_f\ket{-}\ket{x}
+ &=\frac{\ket{f(x)}-\ket{1\oplus f(x)}}{\sqrt2}\ket{x}\notag\\
+ &=(-1)^{f(x)}\ket{-}\ket{x}.
+ \label{eq:search-kickback}
+\end{align}
+The auxiliary factors out unchanged, and the data acquires a sign depending on $f(x)$. By linearity, this implements the phase oracle
+\begin{equation}
+ Z_f\sum_x a_x\ket{x}=\sum_x(-1)^{f(x)}a_x\ket{x},\qquad
+ Z_f\ket{x}=(-1)^{f(x)}\ket{x}.
+ \label{eq:search-phase-oracle}
+\end{equation}
+Phase marking alone does not change the absolute value of any amplitude. A subsequent reflection is needed to convert its phase information into a probability difference.
+\par
+\begin{figure}[htbp]
+ \centering
+ \begin{quantikz}
+ \lstick{$\ket{x}\ (n\text{ qubits})$} & \gate{Z_f} & \rstick{$(-1)^{f(x)}\ket{x}$}\qw
+ \end{quantikz}
+ \caption{A phase oracle acting on the entire $n$-qubit data register. Marked basis states acquire a minus sign.}
+ \label{fig:search-phase-box}
+\end{figure}
+\par
+\par
+\begin{figure}[htbp]
+ \centering
+ \begin{quantikz}
+ \lstick{$\ket{x}\ (n\text{ qubits})$} & \qw & \gate[wires=2]{U_f} & \qw & \rstick{$Z_f\ket{x}$}\qw\\
+ \lstick{$\ket1$} & \gate{H} & & \qw & \rstick{$\ket{-}$}\qw
+ \end{quantikz}
+ \caption{One bit-oracle call implements a phase query by preparing $H\ket1=\ket{-}$. The target of the bit oracle is the auxiliary qubit; its internal reversible computation is not expanded here.}
+ \label{fig:search-kickback}
+\end{figure}
+\par
+
+Conversely, suppose controlled access to the phase oracle is provided:
+\begin{equation}
+ \operatorname{c}\text{-}Z_f
+ =\ketbra00\otimes I+\ketbra11\otimes Z_f,
+\end{equation}
+Then Hadamard gates on the control recover a bit query,
+\begin{equation}
+ (H\otimes I)(\operatorname{c}\text{-}Z_f)(H\otimes I)\ket{a}\ket{x}
+ =\ket{a\oplus f(x)}\ket{x}.
+ \label{eq:search-controlled-conversion}
+\end{equation}
+For a fixed $x$, the controlled phase acts on the auxiliary as $\diag(1,(-1)^{f(x)})=Z^{f(x)}$. Since $HZH=X$, the two Hadamards convert this into $X^{f(x)}$.
+\par
+\begin{figure}[htbp]
+ \centering
+ \begin{quantikz}
+ \lstick{$\ket{x}\ (n\text{ qubits})$} & \qw & \gate{Z_f} & \qw & \rstick{$\ket{x}$}\qw\\
+ \lstick{$\ket a$} & \gate{H} & \ctrl{-1} & \gate{H} & \rstick{$\ket{a\oplus f(x)}$}\qw
+ \end{quantikz}
+ \caption{Converting a controlled phase oracle into a bit oracle. The lower qubit controls $Z_f$ on the complete data register.}
+ \label{fig:search-controlled-conversion}
+\end{figure}
+\par
+
+Uncontrolled and controlled phase access are distinct resource assumptions. For example, $f\equiv0$ and $f\equiv1$ give phase operators $I$ and $-I$, distinguishable only by a global phase in an uncontrolled use. An arbitrary unknown phase black box therefore does not by itself supply a means to evaluate $f(x)$ classically. Search here assumes that a predicate evaluation or a bit oracle is available for verifying the measured candidate.
+
+\section{Grover iteration as two reflections}
+
+Start with the uniform state
+\begin{equation}
+ \ket u=H^{\otimes n}\ket{0^n}
+ =\frac1{\sqrt N}\sum_{x\in\Sigma^n}\ket x.
+ \label{eq:search-uniform}
+\end{equation}
+Let $\mathrm{OR}(x)$ be zero at $x=0^n$ and one elsewhere. Its phase operator is
+\begin{equation}
+ Z_{\mathrm{OR}}\ket x=
+ \begin{cases}
+  \ket x,&x=0^n,\\
+  -\ket x,&x\ne0^n,
+ \end{cases}
+ \qquad Z_{\mathrm{OR}}=2\ketbra{0^n}{0^n}-I.
+ \label{eq:search-zero-reflection}
+\end{equation}
+Conjugating this reflection by Hadamards defines the diffusion operator:
+\begin{align}
+ D&=H^{\otimes n}Z_{\mathrm{OR}}H^{\otimes n}\notag\\
+ &=2H^{\otimes n}\ketbra{0^n}{0^n}H^{\otimes n}-I\notag\\
+ &=2\ketbra uu-I.
+ \label{eq:search-diffusion}
+\end{align}
+The equalities use unitarity of $H^{\otimes n}$ and $H^{\otimes n}\ket{0^n}=\ket u$. Thus $D\ket u=\ket u$, while $D\ket v=-\ket v$ for every $\ket v$ orthogonal to $\ket u$.
+
+One Grover iteration is
+\begin{equation}
+ C=DZ_f=H^{\otimes n}Z_{\mathrm{OR}}H^{\otimes n}Z_f.
+ \label{eq:search-iteration}
+\end{equation}
+Operators act from right to left, so the phase marking precedes diffusion. We use $C$ for this iteration; it is not a generic controlled-gate symbol.
+\par
+\begin{figure}[htbp]
+ \centering
+ \begin{quantikz}[row sep=0.32cm,column sep=0.38cm]
+ \lstick{$x_{n-1}$} & \gate[wires=3]{Z_f} & \gate{H} & \gate[wires=3]{Z_{\mathrm{OR}}} & \gate{H} & \qw\\
+ \lstick{$\vdots$} & & \push{\vdots}\qw & & \push{\vdots}\qw & \qw\\
+ \lstick{$x_0$} & & \gate{H} & & \gate{H} & \qw
+ \end{quantikz}
+ \caption{One Grover iteration $C=DZ_f$. The upper and lower wires denote the most and least significant bits; the intervening Hadamards are omitted graphically. Both phase gates act on the whole register.}
+ \label{fig:search-iteration}
+\end{figure}
+\par
+
+The diffusion formula also explains inversion about the mean amplitude. For $\ket\psi=\sum_xa_x\ket x$, define $\bar a=N^{-1}\sum_xa_x$. Then
+\begin{equation}
+ \braket u\psi=\frac1{\sqrt N}\sum_xa_x=\sqrt N\,\bar a,
+\end{equation}
+and hence
+\begin{align}
+ D\ket\psi
+ &=2\ket u\braket u\psi-\ket\psi\notag\\
+ &=\sum_x(2\bar a-a_x)\ket x.
+ \label{eq:search-inversion-mean}
+\end{align}
+The mean is the algebraic mean of complex amplitudes, not of probabilities. The oracle first negates the marked amplitudes; diffusion then reflects all amplitudes about their new mean. Neither operation alone amplifies the marked probability from the initial uniform state.
+
+An explicit three-qubit implementation clarifies the phase sign. The gate $\operatorname{CCZ}$ multiplies $\ket{x_2x_1x_0}$ by $(-1)^{x_2x_1x_0}$. Therefore
+\begin{equation}
+ B=X^{\otimes3}\operatorname{CCZ}X^{\otimes3}
+ =I-2\ketbra{000}{000}=-Z_{\mathrm{OR}}.
+ \label{eq:search-phase-decomposition}
+\end{equation}
+The first $X$ layer maps $000$ to $111$, the controlled phase negates that component, and the second $X$ layer restores every bit. A phase target is drawn as a $Z$ box, rather than the $\oplus$ target of a controlled $X$.
+\par
+\begin{figure}[htbp]
+ \centering
+ \begin{quantikz}
+ \lstick{$x_2$} & \gate{H} & \gate{X} & \ctrl{2} & \gate{X} & \gate{H} & \qw\\
+ \lstick{$x_1$} & \gate{H} & \gate{X} & \ctrl{1} & \gate{X} & \gate{H} & \qw\\
+ \lstick{$x_0$} & \gate{H} & \gate{X} & \gate{Z} & \gate{X} & \gate{H} & \qw
+ \end{quantikz}
+ \caption{A three-qubit circuit implementing $-D$. In uncontrolled search the overall sign is physically irrelevant: $(-C)^t\ket u=(-1)^tC^t\ket u$. For controlled iteration or phase estimation, the sign must instead be retained.}
+ \label{fig:search-diffusion-decomposition}
+\end{figure}
+\par
+
+\section{The invariant plane and its geometry}
+
+Assume $0<s<N$, so that both subsets are nonempty. Their normalized uniform states are
+\begin{equation}
+ \ket{A_0}=\frac1{\sqrt{N-s}}\sum_{x\in A_0}\ket x,
+ \qquad
+ \ket{A_1}=\frac1{\sqrt s}\sum_{x\in A_1}\ket x.
+ \label{eq:search-two-states}
+\end{equation}
+Disjointness of the subsets and orthogonality of computational basis states imply
+\begin{equation}
+ \braket{A_0}{A_0}=\braket{A_1}{A_1}=1,
+ \qquad\braket{A_0}{A_1}=0.
+\end{equation}
+Partitioning the uniform initial state into the two subsets gives
+\begin{align}
+ \ket u
+ &=\frac1{\sqrt N}\sum_{x\in A_0}\ket x
+   +\frac1{\sqrt N}\sum_{x\in A_1}\ket x\notag\\
+ &=\sqrt{\frac{N-s}{N}}\ket{A_0}
+   +\sqrt{\frac sN}\ket{A_1}.
+ \label{eq:search-u-components}
+\end{align}
+The initial state lies in $\mathcal K=\Span\{\ket{A_0},\ket{A_1}\}$. This is a two-dimensional invariant subspace of the algorithm, not a reduction of the full $N$-dimensional Hilbert space to two dimensions.
+
+\subsection{Deriving the rotation matrix}
+
+The oracle acts as
+\begin{equation}
+ Z_f\ket{A_0}=\ket{A_0},\qquad Z_f\ket{A_1}=-\ket{A_1}.
+ \label{eq:search-z-two}
+\end{equation}
+The uniform-state overlaps are $\braket u{A_0}=\sqrt{(N-s)/N}$ and $\braket u{A_1}=\sqrt{s/N}$. Applying $C$ to the first basis vector gives
+\begin{align}
+ C\ket{A_0}
+ &=D\ket{A_0}
+   =2\sqrt{\frac{N-s}{N}}\ket u-\ket{A_0}\notag\\
+ &=\left(2\frac{N-s}{N}-1\right)\ket{A_0}
+   +\frac{2\sqrt{s(N-s)}}N\ket{A_1}\notag\\
+ &=\frac{N-2s}{N}\ket{A_0}
+   +\frac{2\sqrt{s(N-s)}}N\ket{A_1}.
+ \label{eq:search-first-column}
+\end{align}
+Applying it to the second gives
+\begin{align}
+ C\ket{A_1}
+ &=-D\ket{A_1}
+   =-2\sqrt{\frac sN}\ket u+\ket{A_1}\notag\\
+ &=-\frac{2\sqrt{s(N-s)}}N\ket{A_0}
+   +\left(1-2\frac sN\right)\ket{A_1}\notag\\
+ &=-\frac{2\sqrt{s(N-s)}}N\ket{A_0}
+   +\frac{N-2s}{N}\ket{A_1}.
+ \label{eq:search-second-column}
+\end{align}
+Both images lie in $\mathcal K$, proving invariance. In the ordered basis $(\ket{A_0},\ket{A_1})$, the two coordinate vectors are the columns of
+\begin{equation}
+ M=\frac1N
+ \begin{pmatrix}
+ N-2s&-2\sqrt{s(N-s)}\\
+ 2\sqrt{s(N-s)}&N-2s
+ \end{pmatrix}.
+ \label{eq:search-matrix}
+\end{equation}
+Using columns rather than rows is important: transposing the matrix would reverse the rotation direction.
+
+Introduce the angle
+\begin{equation}
+ \sin\theta=\sqrt{\frac sN},\qquad
+ \cos\theta=\sqrt{\frac{N-s}{N}},\qquad 0<\theta<\frac\pi2.
+ \label{eq:search-theta}
+\end{equation}
+The double-angle identities give
+\begin{equation}
+ \cos2\theta=1-2\sin^2\theta=\frac{N-2s}{N},
+ \qquad
+ \sin2\theta=2\sin\theta\cos\theta=\frac{2\sqrt{s(N-s)}}N.
+\end{equation}
+and the iteration matrix becomes
+\begin{equation}
+ M=\begin{pmatrix}\cos2\theta&-\sin2\theta\\
+                   \sin2\theta&\cos2\theta\end{pmatrix}
+ =R(2\theta).
+ \label{eq:search-rotation}
+\end{equation}
+Direct multiplication verifies $M^{\mathsf T}M=I_2$ and $\det M=1$, so $M\in SO(2)$. The real-plane interpretation describes the trajectory starting from the real uniform state; the underlying Hilbert space is complex, and an arbitrary complex superposition should not be identified with a real arrow.
+
+\subsection{Reflection axes and their composition}
+
+Take $\ket{A_0}$ as the horizontal axis and $\ket{A_1}$ as the vertical axis. Within $\mathcal K$, the oracle preserves the horizontal component and negates the vertical one. Its restricted action is therefore $2\ketbra{A_0}{A_0}-I_{\mathcal K}$. In the full Hilbert space, however, the correct expression is $Z_f=I-2\Pi_1$, with $\Pi_1=\sum_{x\in A_1}\ketbra xx$. If $|A_0|>1$, a non-solution superposition orthogonal to $\ket{A_0}$ is still preserved by $Z_f$, although $2\ketbra{A_0}{A_0}-I$ would negate it. The restricted and full-space formulas must be distinguished.
+
+For an arrow at angle $\alpha$, the oracle reflection changes the angle to $-\alpha$.
+\par
+\begin{figure}[htbp]
+ \centering
+ \begin{tikzpicture}[scale=1.02,>=stealth]
+ \draw[->] (-2.4,0)--(2.9,0) node[right] {$\ket{A_0}$};
+ \draw[->] (0,-1.7)--(0,1.9) node[above] {$\ket{A_1}$};
+ \draw[very thick,blue] (-2.3,0)--(2.55,0);
+ \node[blue] at (-1.6,0.28) {$Z_f\text{ axis}$};
+ \draw[->,thick,orange!70!black] (0,0)--(2.1,1.2) node[above] {$\ket\psi$};
+ \draw[->,thick,orange!70!black] (0,0)--(2.1,-1.2) node[below] {$Z_f\ket\psi$};
+ \draw[dashed,orange!70!black] (2.1,1.2)--(2.1,-1.2);
+ \draw (2.0,0)--(2.0,0.1)--(2.1,0.1);
+ \draw[->] (0.8,0) arc (0:29.75:0.8);
+ \node at (1.0,0.24) {$\alpha$};
+ \end{tikzpicture}
+ \caption{Reflection by $Z_f$ in the invariant plane. The two endpoints have equal horizontal coordinates and opposite vertical coordinates. Dashed segments connect mirror images; this is a geometric illustration, not simulation data.}
+ \label{fig:search-reflection-z}
+\end{figure}
+\par
+
+The diffusion formula $D=2\ketbra uu-I$ is valid in the full space. Within $\mathcal K$, it reflects about the line through $\ket u$, inclined at angle $\theta$ to the non-solution axis.
+\par
+\begin{figure}[htbp]
+ \centering
+ \begin{tikzpicture}[scale=1.02,>=stealth]
+ \draw[->] (-2.2,0)--(2.9,0) node[right] {$\ket{A_0}$};
+ \draw[->] (0,-0.8)--(0,2.5) node[above] {$\ket{A_1}$};
+ \draw[very thick,blue] (205:1.98)--(25:2.65) node[right] {$\ket u$};
+ \draw[->,thick,orange!70!black] (0,0)--(55:2.6) node[above] {$\ket\psi$};
+ \draw[->,thick,orange!70!black] (0,0)--(-5:2.6) node[below right,yshift=-2mm] {$D\ket\psi$};
+ \draw[dashed,orange!70!black] (55:2.6)--(-5:2.6);
+ \draw[->,blue] (0.85,0) arc (0:25:0.85);
+ \node[blue] at (1.13,0.21) {$\theta$};
+ \node[blue] at (-1.35,0.75) {$D\text{ axis}$};
+ \end{tikzpicture}
+ \caption{Reflection by $D$ about the line through $\ket u$. The illustrative input angle is $55^\circ$ and the axis angle is $25^\circ$, giving output angle $2\times25^\circ-55^\circ=-5^\circ$.}
+ \label{fig:search-reflection-d}
+\end{figure}
+\par
+
+A reflection about a line at angle $\theta$ maps $\varphi$ to $2\theta-\varphi$. The two reflections in $C=DZ_f$ consequently act as
+\begin{equation}
+ \alpha\ \xrightarrow{Z_f}\ -\alpha\
+ \xrightarrow{D}\ 2\theta-(-\alpha)=\alpha+2\theta.
+ \label{eq:search-two-reflection-angle}
+\end{equation}
+Each iteration rotates counterclockwise by $2\theta$. A segment between reflected endpoints is perpendicular to the corresponding reflection axis.
+\par
+\begin{figure}[htbp]
+ \centering
+ \begin{tikzpicture}[scale=1.12,>=stealth]
+ \draw[->] (-2.5,0)--(3.3,0) node[right] {$\ket{A_0}$};
+ \draw[->] (0,-2.1)--(0,3.2) node[above] {$\ket{A_1}$};
+ \draw[very thick,blue] (-2.35,0)--(3.0,0);
+ \draw[very thick,red] (202.5:2.38)--(22.5:3.03) node[right] {$\ket u$};
+ \draw[->,thick,orange!70!black] (0,0)--(35:3) node[right] {$\ket\psi$};
+ \draw[->,thick,orange!70!black] (0,0)--(-35:3) node[right] {$Z_f\ket\psi$};
+ \draw[->,thick,orange!70!black] (0,0)--(80:3) node[above right,xshift=2mm] {$C\ket\psi$};
+ \draw[dashed,orange!70!black] (35:3)--(-35:3);
+ \draw[dashed,orange!70!black] (-35:3)--(80:3);
+ \draw[red] (0.58,0) arc (0:22.5:0.58);
+ \node[red] at (0.87,0.15) {$\theta$};
+ \draw[green!50!black] (1.0,0) arc (0:35:1.0);
+ \node[green!50!black] at (1.35,0.30) {$\alpha$};
+ \draw[green!50!black] (1.45,0) arc (0:80:1.45);
+ \node[green!50!black] at (1.26,1.62) {$\alpha+2\theta$};
+ \end{tikzpicture}
+ \caption{The composition of the two reflections. With illustrative angles $\theta=22.5^\circ$ and $\alpha=35^\circ$, the final direction is $80^\circ$. Equal arrow lengths represent preservation of the norm.}
+ \label{fig:search-combined-reflection}
+\end{figure}
+\par
+
+\section{Amplified probabilities and a stopping rule}
+
+The initial coordinate vector is
+\begin{equation}
+ [\ket u]_{\mathcal K}=\begin{pmatrix}\cos\theta\\\sin\theta\end{pmatrix}.
+\end{equation}
+The identity $R(\varphi)R(\chi)=R(\varphi+\chi)$ follows from the angle-addition formulas. For example, the upper-left entry of the product is $\cos\varphi\cos\chi-\sin\varphi\sin\chi=\cos(\varphi+\chi)$ and the upper-right entry is $-\sin(\varphi+\chi)$. Induction gives $M^t=R(2t\theta)$, where $t$ is a nonnegative iteration count, distinct from the number of qubits $n$. Thus
+\begin{align}
+ [C^t\ket u]_{\mathcal K}
+ &=\begin{pmatrix}\cos2t\theta&-\sin2t\theta\\
+                  \sin2t\theta&\cos2t\theta\end{pmatrix}
+   \begin{pmatrix}\cos\theta\\\sin\theta\end{pmatrix}\notag\\
+ &=\begin{pmatrix}\cos((2t+1)\theta)\\\sin((2t+1)\theta)\end{pmatrix}.
+\end{align}
+Returning to state vectors gives
+\begin{equation}
+ C^t\ket u=\cos((2t+1)\theta)\ket{A_0}
+ +\sin((2t+1)\theta)\ket{A_1}.
+ \label{eq:search-state-t}
+\end{equation}
+At $t=0$ this recovers the initial state, and at $t=1$ the state makes angle $3\theta$ with the non-solution axis.
+
+For a normalized state in the invariant plane,
+\begin{equation}
+ \ket\psi=\alpha\ket{A_0}+\beta\ket{A_1},\qquad
+ |\alpha|^2+|\beta|^2=1
+\end{equation}
+the computational-basis expansion is
+\begin{equation}
+ \ket\psi=\sum_{x\in A_0}\frac\alpha{\sqrt{N-s}}\ket x
+ +\sum_{x\in A_1}\frac\beta{\sqrt s}\ket x.
+\end{equation}
+The probability for one specified string is
+\begin{equation}
+ \Pr(X=x)=
+ \begin{cases}
+ |\alpha|^2/(N-s),&x\in A_0,\\
+ |\beta|^2/s,&x\in A_1.
+ \end{cases}
+ \label{eq:search-point-probability}
+\end{equation}
+Summing the mutually exclusive string events instead gives
+\begin{equation}
+ \Pr(X\in A_0)=|\alpha|^2,\qquad
+ \Pr(X\in A_1)=|\beta|^2.
+ \label{eq:search-set-probability}
+\end{equation}
+The subset probability is not divided by the subset size a second time. Substituting the iterated state, the total success probability is
+\begin{equation}
+ P_t(N,s):=\Pr(X\in A_1\mid t\text{ iterations})
+ =\sin^2((2t+1)\theta).
+ \label{eq:search-success}
+\end{equation}
+It depends on the chosen iteration count as well as $N$ and $s$. Conditioned on success, the output is uniform among the solutions:
+\begin{equation}
+ \Pr(X=x\mid X\in A_1)
+ =\frac{P_t(N,s)/s}{P_t(N,s)}=\frac1s,
+ \quad x\in A_1,
+\end{equation}
+This conditional expression assumes $P_t(N,s)>0$.
+
+A complete attempt prepares $\ket{0^n}$, applies $H^{\otimes n}$, chooses $t$, executes $t$ coherent iterations without intermediate measurements, and then measures a string $x$. It outputs $x$ only after checking $f(x)=1$. On failure it prepares a fresh uniform state before retrying. Reusing the measured basis state as if it were still uniform, or inserting measurements between iterations, destroys the coherent rotation analyzed above.
+
+\subsection{Known numbers of solutions}
+
+The first continuous-time peak would satisfy $(2t+1)\theta=\pi/2$, giving
+\begin{equation}
+ t_{\mathrm{real}}=\frac\pi{4\theta}-\frac12.
+\end{equation}
+This value is nonnegative. A nearest-integer rule, with ties resolved upward, is
+\begin{equation}
+ t_*=\left\lfloor\frac\pi{4\theta}\right\rfloor.
+ \label{eq:search-optimal-t}
+\end{equation}
+Writing $y=\pi/(4\theta)$ and using $\lfloor y\rfloor\le y<\lfloor y\rfloor+1$ yields
+\begin{equation}
+ -\frac12<t_*-t_{\mathrm{real}}\leq\frac12.
+\end{equation}
+The angular error at this stopping point is
+\begin{equation}
+ \varepsilon=(2t_*+1)\theta-\frac\pi2
+ =2\theta(t_*-t_{\mathrm{real}}),\qquad |\varepsilon|\leq\theta.
+\end{equation}
+Since $|\varepsilon|\le\theta\le\pi/2$,
+\begin{align}
+ P_{t_*}(N,s)
+ &=\cos^2\varepsilon\notag\\
+ &\geq\cos^2\theta=1-\frac sN.
+ \label{eq:search-success-bound}
+\end{align}
+This is an integer-rounding guarantee, not merely a large-$N$ approximation\cite{BBHT1998}. The rule selects a point near the first peak; it need not maximize success over arbitrarily many later iterations.
+
+For one solution,
+\begin{equation}
+ \theta=\arcsin\frac1{\sqrt N}
+ =\frac1{\sqrt N}+O(N^{-3/2}),\qquad
+ t_*\sim\frac\pi4\sqrt N.
+\end{equation}
+The bound becomes $P_{t_*}(N,1)\ge1-1/N$. The asymptotic expansion explains the quadratic speedup, while an actual iteration count should be chosen from the exact arcsine.
+
+If $0<s\le N/2$, the same rule gives $P_{t_*}\ge1-s/N\ge s/N$. If $N/2<s\le N$, then $\theta>\pi/4$ and $t_*=0$: direct measurement of the uniform state already succeeds with probability $s/N$. Combining these cases gives
+\begin{equation}
+ P_{t_*}(N,s)\geq\max\left\{1-\frac sN,\frac sN\right\},
+ \qquad1\leq s\leq N.
+ \label{eq:search-combined-bound}
+\end{equation}
+When $s=N$, every candidate is a solution and no two-dimensional basis containing $\ket{A_0}$ is needed. Allowing zero iterations is essential in dense instances. For example, $N=4,s=3$ gives $\theta=\pi/3$: direct sampling succeeds with probability $3/4$, but one Grover iteration has success probability $\sin^2\pi=0$.
+
+The following examples use the exact formulas; angles are in radians.
+\par
+\begin{table}[htbp]
+ \centering
+ \begin{tabular}{c c c c c}
+ $N$&$s$&$\theta=\arcsin\sqrt{s/N}$&$t$&$P_t(N,s)$\\\hline
+ 128&1&0.0885038431&8&0.9956198657\\
+ 128&4&0.1777106008&4&0.9991823155\\
+ 128&4&0.1777106008&8&0.0144530758
+ \end{tabular}
+ \caption{Stopping near the first success peak for $N=128$. The first two rows use $t_*$. The final row shows the overrotation caused by using the unique-solution iteration count in a four-solution instance.}
+ \label{tab:search-examples}
+\end{table}
+\par
+
+In the final row, $17\theta\approx3.0211$ is close to the negative non-solution axis, so the solution component is small. More iterations do not monotonically increase success; deciding when to stop is part of the algorithm.
+
+\subsection{Query and gate complexity}
+
+For $0\le z\le1$, $\arcsin z\ge z$: its derivative is $1/\sqrt{1-z^2}\ge1$, and integration begins at zero. Therefore
+\begin{equation}
+ \theta\geq\sqrt{s/N},\qquad
+ t_*\leq\frac\pi{4\theta}\leq\frac\pi4\sqrt{\frac Ns}.
+ \label{eq:search-query-bound}
+\end{equation}
+Each iteration requires one phase query, or one bit-oracle call using Figure~\ref{fig:search-kickback}. Final verification adds one query. The combined success bound guarantees probability at least $1/2$ per complete attempt, so the expected number of attempts is at most two. The expected query complexity remains $O(\sqrt{N/s})$.
+
+If a phase query costs $L_f$ basic gates and diffusion costs $L_D(n)$, the gate count for $t$ iterations is $O(n)+t(L_f+L_D(n))$, plus verification. Decomposing a multicontrolled gate depends on the available ancillas and elementary gate set. A large operator represented by one box is not automatically one physical elementary gate.
+
+\section{Unknown numbers of solutions}
+
+When $s$ is unknown, the angle $\theta$ and the first-peak stopping point are unknown. Using the unique-solution count can overrotate a multiple-solution instance. A workable strategy randomizes the iteration count and expands the range after failures, preparing a new uniform state on every attempt.
+
+A window containing only positive iteration counts cannot be given a universal success guarantee without further conditions. For example, selecting uniformly from $\{1,\ldots,\lfloor\pi\sqrt N/4\rfloor\}$ gives only $t=1$ when $N=4$, and the $s=3$ instance then always fails. If a per-attempt lower bound of $0.4$ were established, ten independent attempts would indeed succeed with probability at least $1-0.6^{10}\approx0.993953$; the arithmetic does not establish the required lower bound. We instead derive a bound for a precisely specified random window\cite{BBHT1998}.
+
+\subsection{Average success over a random window}
+
+Choose $j$ uniformly in $\{0,1,\ldots,m-1\}$, where $m$ is a positive integer. For $0<s<N$,
+\begin{align}
+ \overline P_m
+ &=\frac1m\sum_{j=0}^{m-1}\sin^2((2j+1)\theta)\notag\\
+ &=\frac12-\frac1{2m}\sum_{j=0}^{m-1}\cos((4j+2)\theta).
+ \label{eq:search-average-start}
+\end{align}
+Use the identity
+\begin{equation}
+ 2\sin(2\theta)\cos((4j+2)\theta)
+ =\sin((4j+4)\theta)-\sin(4j\theta).
+\end{equation}
+Summing it over $j$ cancels all intermediate sine terms, leaving
+\begin{equation}
+ \sum_{j=0}^{m-1}\cos((4j+2)\theta)
+ =\frac{\sin(4m\theta)}{2\sin(2\theta)}.
+\end{equation}
+Thus
+\begin{equation}
+ \overline P_m=\frac12-\frac{\sin(4m\theta)}{4m\sin(2\theta)}.
+ \label{eq:search-average-probability}
+\end{equation}
+The denominator is positive because $0<\theta<\pi/2$. Bounding the numerator by one gives
+\begin{equation}
+ \overline P_m\geq\frac12-\frac1{4m\sin(2\theta)}.
+\end{equation}
+In particular, if
+\begin{equation}
+ m\geq m_0:=\frac1{\sin(2\theta)}
+ =\frac{N}{2\sqrt{s(N-s)}},
+ \label{eq:search-critical-window}
+\end{equation}
+then $\overline P_m\ge1/4$. This is an average over the random iteration count, not a guarantee for each count in the window. At $s=0$ and $s=N$, the displayed denominator vanishes and the endpoint cases must be handled directly.
+
+\subsection{Growing windows and expected cost}
+
+Keep a real-valued window scale $T$, convert it to an integer length only when selecting a count, and supplement the quantum attempt with a uniform classical candidate check. This additional check handles dense solution sets. Choose the growth factor $\lambda=5/4$, which satisfies $1<\lambda<4/3$.
+
+\begin{enumerate}
+ \item Set $T=1$ and the cap $T_{\max}=\sqrt N$.
+ \item Draw a uniformly random classical candidate $y$ and evaluate $f(y)$. If it is a solution, output it.
+ \item Otherwise set $m=\lceil T\rceil$ and draw $j$ uniformly from $\{0,1,\ldots,m-1\}$.
+ \item Prepare $\ket u$, apply $j$ Grover iterations, measure $x$, and evaluate $f(x)$. If it is a solution, output it.
+ \item On failure, update $T\leftarrow\min\{\lambda T,\sqrt N\}$ and repeat from step 2.
+\end{enumerate}
+Keeping $T$ real avoids the stalled update $\lfloor1.25T\rfloor=1$ at $T=1$. Including $j=0$ makes the random window consistent with the average-probability derivation. Every reported solution is explicitly verified.
+
+For $1\le s\le3N/4$, the critical scale satisfies
+\begin{equation}
+ m_0=\frac12\sqrt{\frac Ns}\frac1{\sqrt{1-s/N}}
+ \leq\sqrt{\frac Ns}\leq\sqrt N.
+\end{equation}
+The cap therefore reaches the required scale. Before $T$ crosses $m_0$, its successive values are $1,\lambda,\lambda^2,\ldots$. An attempt uses at most $m+1$ queries: two candidate checks and at most $m-1$ phase queries. Since $m=\lceil T\rceil\le T+1$ and $T\ge1$, this is at most $3T$. The first crossing scale obeys $m_0\le T_*<\lambda m_0$, apart from the constant-cost case in which the initial scale already suffices. The precritical cost is bounded by a geometric sum,
+\begin{equation}
+ \sum_{k=0}^{K}3\lambda^k
+ =3\frac{\lambda^{K+1}-1}{\lambda-1}=O(m_0).
+\end{equation}
+
+After the critical scale is reached, each quantum attempt has average success probability at least $1/4$. The probability of failing $r$ consecutive attempts is at most $(3/4)^r$, and the classical check can only improve this. Subsequent window costs grow by at most $\lambda^r$ and cease growing at the cap. Hence
+\begin{equation}
+ \mathbb E[Q_{\mathrm{after}}]
+ \leq 3T_*\sum_{r=0}^{\infty}\left(\frac34\lambda\right)^r
+ =O(m_0),
+ \label{eq:search-growing-tail}
+\end{equation}
+The series converges because $(3/4)\lambda=15/16<1$. This condition explains the upper restriction on the growth factor: the probability of reaching increasingly expensive attempts must decay fast enough to offset their cost.
+
+For $s>3N/4$, the classical candidate check succeeds with probability greater than $3/4$ per attempt. Reaching attempt $r$ then has probability at most $(1/4)^r$, while its window cost grows by at most $\lambda^r$. The convergent series $\sum_r(\lambda/4)^r$ gives expected cost $O(1)$, which is also $O(\sqrt{N/s})$ in this dense regime. Together the cases establish
+\begin{equation}
+ \mathbb E[Q]=O\!\left(\sqrt{\frac Ns}\right),\qquad s>0.
+ \label{eq:search-unknown-complexity}
+\end{equation}
+Candidate verification is included in this bound, including attempts with $j=0$.
+
+\subsection{Confidence and termination when no solution exists}
+
+Once the window is large enough, $R$ independent attempts have failure probability at most $(3/4)^R$. For a prescribed $\delta\in(0,1)$, it suffices to take
+\begin{equation}
+ R\geq\left\lceil\frac{\log\delta}{\log(3/4)}\right\rceil.
+\end{equation}
+For example, $\delta=0.01$ requires $R=17$, since $0.75^{17}<0.01$.
+
+If $s=0$ is allowed, an unbounded loop that waits for success will not terminate. A bounded-error procedure first grows to $T_{\max}=\sqrt N$ and, if no solution has been found, makes $R$ further attempts at that cap. It then reports that no solution was found within the procedure. For $0<s\le3N/4$, the capped window meets the critical condition; for larger $s$, the classical check gives an even stronger bound. The false-negative probability is therefore at most $\delta$, and the worst-case query budget is $O(\sqrt N\log(1/\delta))$. At $s=0$, the procedure never reports a false solution and terminates within that budget. Failure to find a solution is a bounded-error conclusion, not a deterministic certificate obtained by inspecting all candidates.
+
+\section{Amplitude amplification and eigenphase estimation}
+
+Within $\mathcal K$, the rotation matrix has complex eigenvalues $e^{\pm2\ii\theta}$. Explicit eigenvectors are
+\begin{equation}
+ \ket{v_+}=\frac{\ket{A_0}-\ii\ket{A_1}}{\sqrt2},\qquad
+ \ket{v_-}=\frac{\ket{A_0}+\ii\ket{A_1}}{\sqrt2},
+\end{equation}
+Multiplication by the matrix in Equation~\eqref{eq:search-rotation} verifies
+\begin{equation}
+ C\ket{v_+}=\mathrm e^{2\ii\theta}\ket{v_+},\qquad
+ C\ket{v_-}=\mathrm e^{-2\ii\theta}\ket{v_-}.
+\end{equation}
+If controlled $C$ and the required powers are available, phase estimation can extract information about $\theta$, from which the number of solutions is related by $s=N\sin^2\theta$. Phase estimation reads the rotation frequency; amplitude amplification uses the rotation to increase probability in the desired subspace. The connection depends on controlled access, precision, and failure probabilities. It does not by itself constitute a complete quantum-counting algorithm, and the global sign in Figure~\ref{fig:search-diffusion-decomposition} must be accounted for in controlled use.
+
+\section*{Exercises}
+\begin{enumerate}
+ \item Explain why $Z_f$ alone leaves all computational-basis measurement probabilities unchanged, and why the diffusion operation is nevertheless useful after it.
+ \item Show that $\mathcal K$ is invariant under the iteration without identifying it with the complete Hilbert space.
+ \item Derive the sign and magnitude of the rotation angle from the order of the two reflections.
+ \item Starting from a marked-state amplitude, derive the total success probability without introducing an extra factor of $1/s$.
+ \item Explain why both the known-solution stopping rule and the unknown-solution window must allow zero iterations.
+ \item Distinguish randomized stopping from a proved lower bound on its average success probability.
+\end{enumerate}
+
+\backmatter
+\begin{thebibliography}{99}
+\bibitem{NC2010} Michael A. Nielsen and Isaac L. Chuang.
+\emph{Quantum Computation and Quantum Information}, 10th Anniversary Edition.
+Cambridge University Press, 2010.
+DOI: \href{https://doi.org/10.1017/CBO9780511976667}{10.1017/CBO9780511976667}.
+\bibitem{Deutsch1985} David Deutsch.
+Quantum theory, the Church--Turing principle and the universal quantum computer.
+\emph{Proceedings of the Royal Society of London A} \textbf{400}, 97--117 (1985).
+DOI: \href{https://doi.org/10.1098/rspa.1985.0070}{10.1098/rspa.1985.0070}.
+\bibitem{DJ1992} David Deutsch and Richard Jozsa.
+Rapid solution of problems by quantum computation.
+\emph{Proceedings of the Royal Society of London A} \textbf{439}, 553--558 (1992).
+DOI: \href{https://doi.org/10.1098/rspa.1992.0167}{10.1098/rspa.1992.0167}.
+\bibitem{Simon1997} Daniel R. Simon.
+On the Power of Quantum Computation.
+\emph{SIAM Journal on Computing} \textbf{26}(5), 1474--1483 (1997).
+DOI: \href{https://doi.org/10.1137/S0097539796298637}{10.1137/S0097539796298637}.
+\bibitem{BV1997} Ethan Bernstein and Umesh Vazirani.
+Quantum Complexity Theory.
+\emph{SIAM Journal on Computing} \textbf{26}(5), 1411--1473 (1997).
+DOI: \href{https://doi.org/10.1137/S0097539796300921}{10.1137/S0097539796300921}.
+\bibitem{Bennett1973} Charles H. Bennett.
+Logical Reversibility of Computation.
+\emph{IBM Journal of Research and Development} \textbf{17}(6), 525--532 (1973).
+DOI: \href{https://doi.org/10.1147/rd.176.0525}{10.1147/rd.176.0525}.
+\bibitem{SS1971} Arnold Sch\"onhage and Volker Strassen.
+Schnelle Multiplikation gro\ss er Zahlen.
+\emph{Computing} \textbf{7}, 281--292 (1971).
+DOI: \href{https://doi.org/10.1007/BF02242355}{10.1007/BF02242355}.
+\bibitem{Pomerance1996} Carl Pomerance.
+A Tale of Two Sieves.
+\emph{Notices of the American Mathematical Society} \textbf{43}(12), 1473--1485 (1996).
+\href{https://www.ams.org/notices/199612/pomerance.pdf}{American Mathematical Society article}.
+\bibitem{Shor1997} Peter W. Shor.
+Polynomial-Time Algorithms for Prime Factorization and Discrete Logarithms on a Quantum Computer.
+\emph{SIAM Journal on Computing} \textbf{26}(5), 1484--1509 (1997).
+\href{https://arxiv.org/abs/quant-ph/9508027}{arXiv:quant-ph/9508027}.
+\bibitem{Grover1996} Lov K. Grover.
+A Fast Quantum Mechanical Algorithm for Database Search.
+\emph{Proceedings of STOC '96}, 212--219 (1996).
+\href{https://arxiv.org/abs/quant-ph/9605043}{arXiv:quant-ph/9605043}.
+\bibitem{BBHT1998} Michel Boyer, Gilles Brassard, Peter H\o yer, and Alain Tapp.
+Tight Bounds on Quantum Searching.
+\emph{Fortschritte der Physik} \textbf{46}(4--5), 493--505 (1998).
+\href{https://arxiv.org/abs/quant-ph/9605034}{arXiv:quant-ph/9605034}.
+\end{thebibliography}
+\end{document}
