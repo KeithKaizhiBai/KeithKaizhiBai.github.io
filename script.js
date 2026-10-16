@@ -1,22 +1,6 @@
 (function () {
   'use strict';
 
-  // Route the existing Quantum Algorithms note to its public study companion.
-  var quantumNote = document.getElementById('quantum-algorithms-notes');
-  if (quantumNote) {
-    var experimentLink = quantumNote.querySelector('a[href="https://quantum-algorithms-qc-note-oct13.woodsyloach.chatgpt.site"]');
-    if (experimentLink) {
-      experimentLink.setAttribute('href', 'quantum-algorithms/');
-      var audienceText = experimentLink.nextSibling;
-      if (audienceText && audienceText.nodeType === Node.TEXT_NODE) {
-        audienceText.textContent = audienceText.textContent.replace(
-          '(private companion website; owner sign-in required).',
-          '(public companion website; no sign-in required).'
-        );
-      }
-    }
-  }
-
   var header = document.querySelector('header');
   var scrollThreshold = 50;
 
