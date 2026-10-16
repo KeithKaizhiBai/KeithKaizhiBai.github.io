@@ -22,8 +22,9 @@ algorithms companion link explicit in the homepage HTML.
 
 The checkout started at `4d4dc266f32fb2532d8c3c93a340474ae2724883` on `main`.
 The user explicitly authorized committing these four files and pushing to
-`main` on October 16, 2026. Publication and production-link verification are in
-progress; completion will be recorded below after the deployed files are checked.
+`main` on October 16, 2026. Website changes were published in commit
+`26367fca967cee01c7ab09213cfba7109f7a7b59`; production-link verification passed.
+The follow-up documentation commit records the completed verification.
 
 ### SPAI snapshot provenance
 
@@ -53,8 +54,19 @@ Never substitute a `file:` URL or a local drive path into the public HTML.
   The PDF itself was parsed and rendered independently as described above.
 - No LaTeX compilation, full scientific review, full PDF visual review, mobile
   regression test, or comprehensive external-link audit was performed.
-- Next: commit and push the authorized changes, then verify the deployed Notes
-  entry, SPAI PDF hash, and public quantum algorithms companion URL.
+- GitHub Pages [deployment run 38855327362](https://github.com/KeithKaizhiBai/KeithKaizhiBai.github.io/actions/runs/38855327362)
+  completed successfully for website commit `26367fc`.
+- Production homepage, script, SPAI PDF and quantum companion HTML returned
+  HTTP 200 and matched the committed bytes. Hash checks used `?verify=26367fc`
+  to avoid stale CDN responses observed immediately after deployment.
+- All 30 unique local resource URLs referenced by the two HTML pages returned
+  HTTP 200 at their ordinary public URLs.
+- The live Notes entry was checked in the browser: **In progress**, linking to
+  `https://keithkaizhibai.github.io/note_pdfs/spai.pdf`. The downloaded PDF hash
+  matches the source snapshot recorded above. Browser PDF rendering remains
+  unverified as noted above; file availability and integrity passed.
+- No task work remains. Future substantive note updates require a new snapshot
+  and another deployment check; the source folder is not synchronized automatically.
 
 ### Change record
 
@@ -63,3 +75,9 @@ description. Moved the already-working public quantum companion URL from a
 JavaScript rewrite into HTML and removed that redundant rewrite, so the link
 also works without JavaScript. Other biography, publication records, note files,
 styles and quantum experiment assets were retained.
+
+2026-10-16: Following explicit user authorization, committed the four reviewed
+files and pushed to `main`, then verified Pages deployment, the live Notes entry,
+the PDF hash, and all referenced local resources. Git author information was
+reused from the preceding repository commit for these commit commands only;
+no persistent Git identity setting was changed.
