@@ -65,6 +65,11 @@ main > section {
   margin-bottom: 4rem;
 }
 
+main > section,
+.notes-pdf-item {
+  scroll-margin-top: 8rem;
+}
+
 main > section:last-of-type {
   margin-bottom: 2rem;
 }
@@ -446,14 +451,21 @@ mjx-container[jax="CHTML"][display="false"] {
 
 /* ========== Responsive — under 600px ========== */
 @media (max-width: 600px) {
+  header {
+    position: sticky;
+  }
+
   nav ul {
-    flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.5rem 1rem;
     padding: 1rem 1.25rem;
   }
 
   main {
-    padding: 4.5rem 20px 2rem;
+    padding: 1.5rem 20px 2rem;
+  }
+
+  #cv .personal-card {
+    flex-direction: column;
   }
 
   #cv .profile-photo {

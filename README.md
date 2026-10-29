@@ -14,7 +14,76 @@ From the repository root, run `python -m http.server 8766 --bind 127.0.0.1`
 and open `http://127.0.0.1:8766/`. Use HTTP so the publication JSON can load.
 No package installation or build is required for this static site.
 
-## Current state — 2026-10-16
+## Current update — 2026-10-29
+
+The homepage now presents two related FFLO research projects and active work on
+quantum algorithms:
+
+- Personal Info: revised biography covering topological phases, transport,
+  superconductivity, the altermagnetic FFLO preprint, FFLO active learning,
+  and current quantum algorithm studies.
+- Experience: separate cards for the altermagnetic FFLO collaboration and the
+  reliability-aware active-learning project, with repository, manuscript and
+  PDF links. Project start dates are not inferred from publication dates.
+- Publications: two new 2026 records, explicitly labeled **arXiv preprint** and
+  **GitHub manuscript · v9 (initial draft)**. The latter is not a journal paper
+  or a submission-ready manuscript.
+- Interests: ongoing quantum algorithm research, linked to the existing notes
+  and PennyLane companion. These are numerical studies, not hardware results.
+- Narrow screens: a wrapping, sticky navigation bar and stacked personal card
+  prevent the navigation and contact details from hiding the main content.
+  Local anchor targets leave space below the navigation.
+
+### Sources and scientific scope
+
+- [arXiv:2607.15720](https://arxiv.org/abs/2607.15720): *First-Order Topological
+  FFLO Transition and Superconducting Diode Sign Reversal in Altermagnetic
+  Nanowires*, Bo Fu, Kaizhi Bai, Chang-An Li and Shun-Qing Shen; submitted
+  July 17, 2026.
+- [FFLO_AL](https://github.com/KeithKaizhiBai/FFLO_AL) and
+  [manuscript v9](https://github.com/KeithKaizhiBai/FFLO_AL/tree/main/reports/manuscript/v9):
+  *Reliability-aware active learning for FFLO phase spaces*, Kai-Zhi Bai (2026).
+  Title, author, methods and status were checked against the repository README,
+  manuscript TeX and author-review record on October 29, 2026.
+
+The project description distinguishes numerical reliability from phase
+identity and restricts topology evaluation to reliable, gapped FFLO states.
+It does not claim a complete three-dimensional phase atlas, a measured
+wall-clock speedup, or a new open-source license grant.
+
+### Maintaining publication records
+
+`data/publications.json` remains the source displayed by `script.js`.
+Both new records use `"manual": true`. The optional Scholar refresh retains
+these curated records, deduplicates matches by normalized title or canonical
+arXiv/DOI/URL identifiers, and sorts by year in descending order. Curated
+metadata takes precedence when a matching Scholar record appears. Unmarked
+records continue to be replaced by the Scholar refresh.
+
+Offline regression checks (no Scholar requests):
+
+```sh
+python3 -B -m unittest discover -s scripts -p 'test_fetch_publications.py' -v
+node --check script.js
+git -c core.whitespace=cr-at-eol diff --check
+```
+
+### Validation
+
+- Five offline publication refresh tests passed, including manual retention,
+  title/identifier deduplication and stable year ordering.
+- JavaScript syntax and Git whitespace checks passed.
+- Both HTML pages were checked for local resource paths, duplicate IDs and
+  local anchors; all 31 unique referenced local resources and the publication
+  JSON returned HTTP 200 through the local preview.
+- All five newly added GitHub/arXiv destination URLs returned HTTP 200.
+- The local browser rendered all 10 publication cards, both project cards,
+  the revised biography and the quantum algorithm interest entry. Browser
+  console checks found no warnings or errors.
+- Changes are prepared for review; this update does not record a production
+  deployment. The October 16 deployment described below is historical.
+
+## Previous update — 2026-10-16
 
 The current task connects the probability, statistics, stochastic processes and
 machine learning note to the existing SPAI PDF, and makes the public quantum

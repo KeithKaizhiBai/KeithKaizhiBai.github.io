@@ -1,5 +1,25 @@
 [
   {
+    "title": "Reliability-aware active learning for FFLO phase spaces",
+    "authors": "Kai-Zhi Bai",
+    "venue": "GitHub manuscript · v9 (initial draft)",
+    "year": "2026",
+    "volume": "",
+    "pages": "",
+    "url": "https://github.com/KeithKaizhiBai/FFLO_AL/tree/main/reports/manuscript/v9",
+    "manual": true
+  },
+  {
+    "title": "First-Order Topological FFLO Transition and Superconducting Diode Sign Reversal in Altermagnetic Nanowires",
+    "authors": "Bo Fu, Kaizhi Bai, Chang-An Li, Shun-Qing Shen",
+    "venue": "arXiv preprint",
+    "year": "2026",
+    "volume": "",
+    "pages": "",
+    "arxiv_id": "2607.15720",
+    "manual": true
+  },
+  {
     "title": "Nearly semi-elliptic relation between the minimal conductivity and Hall conductivity in unpaired Dirac fermions",
     "authors": "Bo Fu, Kai-Zhi Bai, Shi-Hao Bi, Shun-Qing Shen",
     "venue": "arXiv preprint",
