@@ -37,13 +37,17 @@
 
 ## 12月24–29日行程图
 
-- 日期、产品08:30–19:00／09:00–13:30／13:00–22:00／07:00–13:30来自用户提供的计划，不表示运营商已确认或用户已经预订。
+- 日期与产品时段来自11月17日更新的计划。Papar中午场11:00–15:00，早场09:00–13:30暂按村内时段。若含接送，须改用订单的到村、离村时间，避免重复计时。其余分段停留为规划预算。
 - 驾车几何取自[OSRM公开服务](https://project-osrm.org/)，底层路网为OSM；对几何降采样，标注参考里程。OSRM自由流车速不用于旅游车程；保留山路、接送与天气余量。个别反向短程沿用道路走廊并注明，不能用于逐向导航。
-- 海上直线、城市步行连线、车站至海滩短接驳为方向示意，非实际航迹／步行道路。Weston图钉为活动区域，未虚构运营商码头及河上航线。
+- 海上直线与城市步行连线为方向示意，非实际航迹／步行道路。Weston图钉为活动区域，未虚构运营商码头及河上航线。
 - [JSK官方码头说明](https://www.jskmantananiresorts.my/faq)及其[地图位置](https://maps.app.goo.gl/r57MyYMo6TZcRjxf9)：仅用于Rampayan方向示例，**没有据此认定用户的懒猫小美人鱼产品使用JSK码头／度假村**。具体岛屿、营地、集合码头仍需订单确认。
+- [懒猫美人鱼岛常规线路](https://www.lanmao.cn/blog/mantanani-island-day-tour-booking/)提到Kuala Abai。[另一小美人鱼产品](https://www.travelboxsabah.com/zh/product/the-one-mantanani)使用Rampayan，两者仅用于估算。[小美人鱼岛位置](https://www.geonames.org/1736451/pulau-mantanani-kecil.html)用于标岛屿方向。
+- [大王花与Weston组合产品示例](https://huodong.ctrip.com/ottd-activity/dest/t95701283.html)说明市场上有同日组合，12月27日的库存与懒猫交接尚未确认。[Weston当地图示时刻](https://www.borneotravelnetwork.com/tour-packages-sabah-bki06-western-eco-tour.php)用于估计岸上、乘船、晚餐及回程用时。
+- [亚庇12月日照表](https://www.timeanddate.com/sun/malaysia/kota-kinabalu?month=12&year=2026)给出12月26日日落约18:09，当日能见度取决于天气。
+- [Borneo Eco Tours步道说明](https://www.borneoecotours.com/blog/5-trails-to-explore-in-kinabalu-national-park/)分别列Kiau View为2344米、约1小时，Silau-Silau为3396米、约1–1.5小时。游览预算另留衔接和休息。
 - [铁路局日落列车](https://railway.sabah.gov.my/pelancongan/ttmsb/)：通常周六16:00–20:00，丹绒亚路至Benoni方向往返，非闭合环线。只显示已测绘铁路走廊，河口末端接驳待运营方确认。**2026-12-26开行尚未确认。**
 - [Papar的Borneo Cultural Village](https://sabahtourism.com/destination/borneo-cultural-village-2/)：用户已确认这家文化村，不能与Mari Mari混用。
-- [大王花信息中心](https://sabahtourism.com/destination/rafflesia-information-centre/)：Tambunan基地；花期与林中找花时间不固定。周一回城再去神山、全天直接串联、周六大王花／周一神山，是三种不同安排，网页允许比较。
+- [大王花信息中心](https://sabahtourism.com/destination/rafflesia-information-centre/)：Tambunan基地；花期与林中找花时间不固定。调整后改在周日07:00–13:30参观，同日Weston团13:00接人，两段相差30分钟且没有交接余量。
 - [小红书：神山公园徒步实录](https://www.xiaohongshu.com/explore/6a6eedac000000003300989b)：已阅读正文与作者步道图；作者原计划KVT＋SST，实际因雨和泥泞改短线。徒步与登顶、观光包车不同。仅提炼规划经验，不复刻图片、全文或个人价格。
 - [小红书：AMT旅行社神山包车观光](https://www.xiaohongshu.com/explore/6a7ff5ea0000000005033f55)：旅行社账号的观景点、市场、温泉鱼疗、奶牛场一日安排，17:00是开始回城，不是抵达。不是KVT＋SST徒步产品，不能直接相加。
 - KVT/SST几何来自OSM已测绘路径（包括ways 77931739、77931740、77931741等）；地图与运营商统计长度不同，约5–6公里、2.5–3.5小时为规划值，雨后可能更久。未把缺失连接伪造成完整GPS环线；当天以公园地图及开放情况为准。
