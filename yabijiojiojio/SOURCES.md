@@ -53,3 +53,13 @@
 - KVT/SST几何来自OSM已测绘路径（包括ways 77931739、77931740、77931741等）；地图与运营商统计长度不同，约5–6公里、2.5–3.5小时为规划值，雨后可能更久。未把缺失连接伪造成完整GPS环线；当天以公园地图及开放情况为准。
 
 D3库已嵌入页面，许可证保留在源码vendor/D3-LICENSE；地图显示不依赖第三方地图瓦片或运行时CDN请求。详情中的外链仍需要网络。
+
+## 11月17日酒店与新行程更新
+
+- 候选酒店及交通判断据[凯悦尚萃官网](https://www.hyatt.com/hyatt-centric/en-US/bkict-hyatt-centric-kota-kinabalu)、[喜来登官网](https://www.marriott.com/en-us/hotels/bkisi-sheraton-kota-kinabalu/overview/)、[麦哲伦官网](https://www.suteraharbour.com/hotels/the-magellan-sutera-resort/)、[皇宫酒店官网](https://thepalacehotelkk.com/)、[丹绒亚路香格里拉](https://www.shangri-la.com/kotakinabalu/tanjungaruresort/about/map-directions/)、[莎利雅香格里拉](https://www.shangri-la.com/kotakinabalu/rasariaresort/about/map-directions/)。皇宫官网目前列翻修公告，未将设施可用性当作确认事实。
+- Hyatt图钉来自其官网地址链接最终Google Maps地点坐标5.9876813,116.0783957；喜来登来自官网地图链接5.977695163038609,116.07290393617629。麦哲伦采用OSM way139763704。DBKK采用公开位置链接5.9889705,116.0749509并与[市政府公告](https://dbkk.sabah.gov.my/news/737)核对名称。
+- Bay Edge暂按[Qantas酒店页](https://www.qantas.com/hotels/properties/1205930-the-bay-edge-resort-kota-belud)的KM10 Jalan Kuala Abai地址，[IMPT位置资料](https://impt.io/green-hotels/malaysia/kota-belud/the-bay-edge-resort-kota-belud/)坐标6.3899,116.3569，用户英文名仍待确认。区政府[开业视频](https://www.youtube.com/watch?v=NfqnJB9wkdw)也将酒店置于Kuala Abai方向。
+- [公交运营方线路](https://jaguhbayu.com.my/BAS.MY-KotaKinabalu/routes)公开应用表列S08机场后经Bengkel JKR、Perkeso、Sutera Harbour、Imago至KK Sentral ll，成人机场到总站RM1.30，每15分钟、全线05:50–22:50。机场具体班次另核。班表取自公开应用版本1.2.1+build.18.bf96e0a3，不套用旧minivan班表。
+- [神山公园官方说明](https://www.sabahparks.org.my/kinabalu-park/)列植物园9:00–16:00、15:00最后入园，导览9:00、12:00、15:00。未核实普通参观必须提前预约，导览预约与当天开放须联系公园。植物园坐标采用OSM node5058274622。
+- 新版本由周六大王花、周日Papar文化村＋Weston、周一植物园＋KVT/SST替换此前版本。原文上方旧版本的冲突说明已由本段更新。周五两岛二选一，默认环滩岛只用于展示酒店交通。用户给船程1–1.5小时、RIA/MK待出团单确认。
+- 住宿分配为规划建议，未核验圣诞房价、库存或订房条款。建议市区4晚＋周六海边1晚，亦可市区连住5晚。
