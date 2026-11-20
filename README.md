@@ -14,7 +14,30 @@ From the repository root, run `python -m http.server 8766 --bind 127.0.0.1`
 and open `http://127.0.0.1:8766/`. Use HTTP so the publication JSON can load.
 No package installation or build is required for this static site.
 
-## Current update — 2026-10-29
+## Current update — 2026-11-20
+
+The SPAI note now uses the November 20, 2026 compiled snapshot from
+`E:\CosmosWork\Notes_Previous\SPMLAI\spai.pdf` (63 pages). The homepage
+description includes the new reinforcement-learning chapter: Markov decision
+processes and policy gradients. The note remains **In progress**.
+
+- Active website files: `note_pdfs/spai.pdf` and its entry in `index.html`.
+- PDF SHA-256: `d30e5a5257f674a3ac8b3792547aeb08913c8e4982656470e39a10c9a76ff9e9`.
+- The download URL includes `?v=2026-11-20` so visitors receive the new snapshot
+  despite a cached earlier PDF. The PDF path remains stable.
+- The source PDF and LaTeX files were read only; no recompilation was performed.
+- Validation: all 63 pages parsed; Poppler rendered the cover and all four
+  reinforcement-learning pages (PDF pages 57–60), which were visually checked.
+  pypdf reported a missing optional fontTools dependency for some CFF math
+  encodings; Poppler rendering provided the independent visual check.
+- Publication requested by the user. The checkout was fast-forwarded from
+  `ed6eab2` to remote `de5319e` before editing, preserving existing website work.
+- Copy hash and all 34 local resource references in the homepage and quantum
+  companion HTML passed; IDs and local anchors were also checked.
+- Next: commit and push this note update, then verify deployment, the live entry
+  and the served PDF hash.
+
+## Previous update — 2026-10-29
 
 The homepage now presents two related FFLO research projects and active work on
 quantum algorithms:
