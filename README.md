@@ -34,8 +34,15 @@ processes and policy gradients. The note remains **In progress**.
   `ed6eab2` to remote `de5319e` before editing, preserving existing website work.
 - Copy hash and all 34 local resource references in the homepage and quantum
   companion HTML passed; IDs and local anchors were also checked.
-- Next: commit and push this note update, then verify deployment, the live entry
-  and the served PDF hash.
+- Published to `main` in `ce40282b38022ba16a75154524393fbe6a587243`.
+  [Pages deployment 44680898309](https://github.com/KeithKaizhiBai/KeithKaizhiBai.github.io/actions/runs/44680898309)
+  completed successfully.
+- Production homepage and `note_pdfs/spai.pdf?v=2026-11-20` returned HTTP 200
+  and matched the local files byte for byte. The served PDF also matches the
+  source PDF hash above (1,855,839 bytes, `application/pdf`).
+- Browser inspection confirmed the date, 63-page count, reinforcement-learning
+  description and exact PDF link in the live Notes entry. No task work remains;
+  future note changes require another snapshot update and deployment check.
 
 ## Previous update — 2026-10-29
 
